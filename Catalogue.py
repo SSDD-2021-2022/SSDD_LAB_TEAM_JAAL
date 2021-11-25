@@ -23,7 +23,7 @@ class Catalogue(Ice.Aplication, IceFlix.Authenticator):
         return tiles
 
     def addTags(self, id, tag, userToken):
-
+        
 
         #preguntar lo de poner idmedia y lo de autorized
     def removeTags(id, nameTag, adminToken, current=None):

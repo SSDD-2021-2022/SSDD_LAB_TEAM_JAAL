@@ -12,11 +12,9 @@ EXIT_ERROR=1
 class Catalogue(Ice.Aplication, IceFlix.Authenticator):
 
     def getTile(self, id):
-
         return tile
 
-
-    def getTilesByName(self, ):
+    def getTilesByName(self, name, exact ):
         return tile
 
     def getTilesByTags(self, tag, includeAllTags, userToken):

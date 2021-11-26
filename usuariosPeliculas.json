@@ -1,0 +1,24 @@
+{
+    "users": 
+    [
+        {
+            "user": "blas",
+            "idsPeliculas": ["1", "2", "3"]
+            
+        },
+
+        {
+            "user": "antonio",
+            "idsPeliculas": ["3", "4", "5"]
+
+        }, 
+
+        {
+            "user": "ssdd",
+            "idsPeliculas": ["1", "7"]
+
+        } 
+    ]
+
+}
+

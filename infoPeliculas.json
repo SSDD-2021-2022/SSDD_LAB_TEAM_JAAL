@@ -1,0 +1,27 @@
+{
+    "peliculas": 
+    [
+        {
+            "id": "1",
+            "nombre": "eee",
+            "tags": ["accion", "terror"]
+            
+        },
+
+        {
+            "id": "2",
+            "nombre":"ooo",
+            "tags": ["romance", "drama", "fantasia"]
+
+        }, 
+
+        {
+            "id": "3",
+            "nombre":"uuu",
+            "tags": ["comedia", "animacion"]
+
+        } 
+    ]
+
+}
+

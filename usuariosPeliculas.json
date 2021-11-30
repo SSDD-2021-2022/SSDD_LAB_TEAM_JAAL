@@ -3,19 +3,17 @@
     [
         {
             "user": "blas",
-            "idsPeliculas": ["1", "2", "3"]
+            "tags": {"id1":["tag1","tag2"]}
             
         },
 
         {
-            "user": "antonio",
-            "idsPeliculas": ["3", "4", "5"]
+            "user": "antonio"
 
         }, 
 
         {
-            "user": "ssdd",
-            "idsPeliculas": ["1", "7"]
+            "user": "ssdd"
 
         } 
     ]

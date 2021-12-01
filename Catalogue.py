@@ -1,38 +1,30 @@
 #!/usr/bin/env python3
 
-from os import name
 import sys
 import uuid
 import json
 import Ice
-Ice.LoadSlice('iceflix.ice')
+Ice.loadSlice('iceflix.ice')
 import IceFlix
-import metodos
+#import metodos
 
 EXIT_ERROR=1
 
-class MediaInfo:
-    def __init__(self, name, tags):
-        self.name = name
-        self.tags = tags
-
-class Media:
 
 
-    def __init__(self, id, provider, MediaInfo):
-        self.id = id
-        self.provider = provider
-        self.MediaInfo = MediaInfo
+MediaInfo = IceFlix.MediaInfo
+Media = IceFlix.Media
 
-class Catalogue(Ice.Aplication, IceFlix.Authenticator):
+
+class MediaCatalogI(IceFlix.MediaCatalog):
 
     def getTile(self, id):
         data = json.loads(open('infoPeliculas.json').read())
         for ids in data:
             if(ids == id):
                 tile = data[ids]
-        print("El titulo de la pelicula es: ", tile)
-        return Media(tile)
+        Media.id = tile
+        return Media
         
 
     def getTilesByName(self, name, exact):
@@ -43,17 +35,52 @@ class Catalogue(Ice.Aplication, IceFlix.Authenticator):
             for ids, pelis in data.items():
                 if(pelis == name):
                     id.append(ids)
-            print("El titulo de la pelicula es: ", id)
-            return id
+            
         else:
             for ids, pelis in data.items():
                 if(name in pelis):
                     id.append(ids)
-            print("El titulo de la pelicula es: ", id)
-            return id
+        return id
 
     def getTilesByTags(self, tags, allTags, userToken):
-        return tiles
+        id = []
+        data = json.loads(open('usuariosPeliculas.json').read())
+
+        user = "blas"
+        for usuario in data["users"]:
+            if (usuario["user"] == user):
+#                print("el usuario existe ---> ", user)
+                
+                todosTags = usuario["tags"]
+                for peliculas, tagsPelicula in todosTags.items():
+                    print(peliculas)
+                    for oneTag in tagsPelicula:
+                        print(oneTag)
+                        for meTag in tags:
+
+
+
+
+
+
+
+
+                            if(meTag == oneTag):
+                                id.append(peliculas)
+
+
+
+#                if(allTags == True):
+    
+
+#                else:
+
+                
+
+#            else:
+#                print("el usuario no existe ---> ", user)
+
+        return id
 
     #def addTags(self, id, tag, userToken):
         
@@ -80,7 +107,17 @@ class Catalogue(Ice.Aplication, IceFlix.Authenticator):
 
     #def updateMedia(id, initialName, proveedor)
 
+class ClientAuthentication(Ice.Application):
 
-name = "id3"
-exact = False
-Catalogue.getTile(name)
+    
+    id = "id3"
+    nombre = "thor"
+    exact = False
+    tags = ["terror", "aventura"]
+    userToken = 0
+
+
+    aux = MediaCatalogI()
+    Media = aux.getTile(id)
+    print(Media.id)
+    print(aux.getTilesByTags(tags, exact, userToken))

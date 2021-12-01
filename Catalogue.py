@@ -11,7 +11,7 @@ import metodos
 
 EXIT_ERROR=1
 
-class Catalogue(Ice.Aplication, IceFlix.Authenticator):
+class Catalogue(Ice.MediaCatalogue):
 
     def getTile(self, id):
         return tile

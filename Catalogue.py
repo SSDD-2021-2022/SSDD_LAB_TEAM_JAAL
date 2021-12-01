@@ -11,15 +11,48 @@ import metodos
 
 EXIT_ERROR=1
 
+class MediaInfo:
+    def __init__(self, name, tags):
+        self.name = name
+        self.tags = tags
+
+class Media:
+
+
+    def __init__(self, id, provider, MediaInfo):
+        self.id = id
+        self.provider = provider
+        self.MediaInfo = MediaInfo
+
 class Catalogue(Ice.Aplication, IceFlix.Authenticator):
 
     def getTile(self, id):
-        return tile
+        data = json.loads(open('infoPeliculas.json').read())
+        for ids in data:
+            if(ids == id):
+                tile = data[ids]
+        print("El titulo de la pelicula es: ", tile)
+        return Media(tile)
+        
 
-    def getTilesByName(self, name, exact ):
-        return tile
+    def getTilesByName(self, name, exact):
+        id = []
+        data = json.loads(open('infoPeliculas.json').read())
 
-    def getTilesByTags(self, tag, includeAllTags, userToken):
+        if(exact == True):
+            for ids, pelis in data.items():
+                if(pelis == name):
+                    id.append(ids)
+            print("El titulo de la pelicula es: ", id)
+            return id
+        else:
+            for ids, pelis in data.items():
+                if(name in pelis):
+                    id.append(ids)
+            print("El titulo de la pelicula es: ", id)
+            return id
+
+    def getTilesByTags(self, tags, allTags, userToken):
         return tiles
 
     #def addTags(self, id, tag, userToken):
@@ -47,3 +80,7 @@ class Catalogue(Ice.Aplication, IceFlix.Authenticator):
 
     #def updateMedia(id, initialName, proveedor)
 
+
+name = "id3"
+exact = False
+Catalogue.getTile(name)

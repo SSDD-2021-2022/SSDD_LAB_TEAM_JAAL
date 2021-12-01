@@ -3,12 +3,14 @@
     [
         {
             "user": "blas",
-            "tags": {"id1":["tag1","tag2"]}
+            "tags": {"id1":["terror","aventuta"], "id4":["comedia","romance"], "id7":["romance","terror"] }
+            
             
         },
 
         {
-            "user": "antonio"
+            "user": "antonio", 
+            "tags": {"id3":["tag1","tag2"]}
 
         }, 
 

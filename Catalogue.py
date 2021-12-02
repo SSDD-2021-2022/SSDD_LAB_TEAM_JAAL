@@ -79,7 +79,27 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         return id
 
-    #def addTags(self, id, tag, userToken):
+    def addTags(self, id, tag, userToken):
+        user="blas"
+        data=json.loads(open('usuariosPeliculas.json').read())
+
+        for usuario in data["users"]:
+            if usuario["user"] == user:
+                listaTagsUsuario = usuario["tags"]
+                for id_pel, tagsUser in listaTagsUsuario.items():
+                    print(str(id_pel)+" "+str(tagsUser))
+                    if id_pel == id:  
+                        for j in tag:
+                            if(j in tagsUser):
+                                tag.remove(j)
+                            else:
+                                tagsUser.append(j)
+                                print(j)
+                                print(tagsUser)
+        
+        with open('usuariosPeliculas.json', 'w') as data_file:
+            data = json.dump(data, data_file)
+
         
 
         #preguntar lo de poner idmedia y lo de autorized

@@ -43,42 +43,39 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         return id
 
     def getTilesByTags(self, tags, allTags, userToken):
+        idAT = []
         id = []
+        todasTags = 0
         data = json.loads(open('usuariosPeliculas.json').read())
 
         user = "blas"
+        #comprobacion de que el usuario esta en el json
         for usuario in data["users"]:
             if (usuario["user"] == user):
 #                print("el usuario existe ---> ", user)
                 
-                todosTags = usuario["tags"]
-                for peliculas, tagsPelicula in todosTags.items():
+                #sacamos las tags del usuario
+                tagsUsuario = usuario["tags"]
+                #se itera el json, peliculas --> id, tagsPelicula--> los tags de ese id de pelicula
+                for peliculas, tagsPelicula in tagsUsuario.items():
                     print(peliculas)
-                    for oneTag in tagsPelicula:
-                        print(oneTag)
-                        for meTag in tags:
+                    print(tagsPelicula)
+                    
+                    for meTag in tags: #meTag--> cada una de las tag que se meten al metodo
+                        if(meTag in tagsPelicula):
+                            todasTags = todasTags+1
+                            if(allTags == False):
+                                idAT.append(peliculas)
+                    print("variable todasTags "+str(todasTags))
+                    if(todasTags == len(tags) and allTags):
+                        id.append(peliculas)
+                        print("El id "+peliculas+" coincide con los 3 tags")
+                    todasTags = 0
 
-
-
-
-
-
-
-
-                            if(meTag == oneTag):
-                                id.append(peliculas)
-
-
-
-#                if(allTags == True):
-    
-
-#                else:
-
-                
-
-#            else:
-#                print("el usuario no existe ---> ", user)
+        if(allTags == False):
+            for i in idAT:
+                if i not in id:
+                    id.append(i)
 
         return id
 
@@ -112,8 +109,8 @@ class ClientAuthentication(Ice.Application):
     
     id = "id3"
     nombre = "thor"
-    exact = False
-    tags = ["terror", "aventura"]
+    exact = True
+    tags = ["terror", "aventuta"]
     userToken = 0
 
 

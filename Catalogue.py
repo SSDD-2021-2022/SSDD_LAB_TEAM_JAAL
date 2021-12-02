@@ -126,7 +126,17 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             print("usuario no autorizado")
             sys.exit(1)
 
-    #def renameTile(id, name, adminToken):
+    def renameTile(self, id, name, adminToken):
+
+        user = "blas"
+        data = json.loads(open('infoPeliculas.json').read())
+
+        for ids in data:
+            if ids == id:
+                data[ids] = name
+    
+        with open('infoPeliculas.json', 'w') as data_file:
+            data = json.dump(data, data_file)
 
     #def updateMedia(id, initialName, proveedor)
 

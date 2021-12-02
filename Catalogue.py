@@ -115,8 +115,13 @@ class ClientAuthentication(Ice.Application):
     
     id = "id3"
     nombre = "thor"
+
     exact = False
     tags = ["tag1"]
+
+    exact = True
+    tags = ["terror", "aventuta"]
+
     userToken = 0
 
 

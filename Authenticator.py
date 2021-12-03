@@ -2,8 +2,11 @@
 
 from os import remove
 import sys
+import time
 import uuid
 import json
+import random
+import datetime
 
 import Ice
 Ice.loadSlice('iceflix.ice')
@@ -128,10 +131,26 @@ class ClientAuthentication(Ice.Application):
 
 
     def run(self,argv):
+        
         #obtencion del proxy, que se introduce por argumentos
         proxy = self.communicator().stringToProxy(argv[1])
         main_c = IceFlix.MainPrx.checkedCast(proxy)
         aux = AuthenticatorI(main_c)
+       
+       #Crear proxy de authenticator para registrarlo llamando a register-->del main
+        broker = self.communicator()
+        servant = AuthenticatorI(main_c)
+        adapter = broker.createObjectAdapter("AuthenticatorAdapter")
+        time = datetime.datetime.now()
+        proxyAuth = adapter.add(servant, broker.stringToIdentity("Authenticator"+str(time.microsecond)))
+        print(proxyAuth, flush=False)
+        print(type(proxyAuth))
+
+        adapter.activate()
+        self.shutdownOnInterrupt()
+
+        main_c.register(proxyAuth)
+
         user = "antonio"
         user1= "ejemplo"
         token = aux.refreshAuthorization(user, "passssss")

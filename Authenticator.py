@@ -9,13 +9,14 @@ import Ice
 Ice.loadSlice('iceflix.ice')
 import IceFlix
 
-EXIT_ERROR = 1
-
 dictTokens = { 0:{"user": "", "token":""}}
 i = 0
-proxy_argv = ""
+#communicator = None
 
-class AuthenticatorI(Ice.Application, IceFlix.Authenticator):
+class AuthenticatorI(IceFlix.Authenticator):
+
+    def __init__(self, main_c):
+        self.main_c = main_c
 
     def refreshAuthorization(self,user, passwordHash, current=None): #Metodo para crear un nuevo token (recibe user y hash de la password)
         try: 
@@ -71,21 +72,27 @@ class AuthenticatorI(Ice.Application, IceFlix.Authenticator):
 
     def addUser(self, user, passwordHash, adminToken, current = None):
         try: 
-            proxy = self.communicator().stringToProxy(sys.argv[1])
-            main_c = IceFlix.MainPrx.checkedCast(proxy)
-            if(main_c.isAdmin(adminToken) == False):
+            usuarioExistente = False
+
+            if(self.main_c.isAdmin(adminToken) == False):
                 raise IceFlix.Unauthorized
             
-            if(main_c.isAdmin(adminToken)):
+            if(self.main_c.isAdmin(adminToken)):
                 i = 0
                 data = json.loads(open('credenciales.json').read())
 
                 for usuario in data["users"]:
-                    i = i+1
-                dict = {"user":str(user), "passwordHash":str(passwordHash)}
-                data["users"].append(dict)
-                #data["users"][i]["passwordHash"] = passwordHash
-
+                    print(usuario)
+                    if(usuario['user'] == user):
+                        usuarioExistente = True
+                        usuario['passwordHash'] = passwordHash
+                
+                if(usuarioExistente==False):
+                    dict = {"user":str(user), "passwordHash":str(passwordHash)}
+                    data["users"].append(dict)
+                else:
+                    print("Usuario "+user+" existente. Password cambiada con éxito")
+                
                 with open('credenciales.json', 'w') as data_file:
                     data = json.dump(data, data_file)
         
@@ -94,12 +101,10 @@ class AuthenticatorI(Ice.Application, IceFlix.Authenticator):
 
     def removeUser(self, user, adminToken, current = None):
         try:
-            proxy = self.communicator().stringToProxy(sys.argv[1])
-            main_c = IceFlix.MainPrx.checkedCast(proxy)
-            if(main_c.isAdmin(adminToken) == False):
+            if(self.main_c.isAdmin(adminToken) == False):
                 raise IceFlix.Unauthorized
             
-            if(main_c.isAdmin(adminToken)):
+            if(self.main_c.isAdmin(adminToken)):
                 data = json.loads(open('credenciales.json').read())
                 for usuario in data["users"]:
                     if(usuario["user"] == user):
@@ -113,19 +118,33 @@ class AuthenticatorI(Ice.Application, IceFlix.Authenticator):
             #sys.exit(1)
 
 class ClientAuthentication(Ice.Application):
+
+    def actualizarDictTokens(self,token, user):
+        global i
+        if(token != None):
+            print(i)
+            dictTokens[i] = {"user":str(user), "token":str(token)}
+            i = i+1
+
+
     def run(self,argv):
-        proxy_argv = argv[1] 
-        
-        i = 0
-        aux = AuthenticatorI()
-        user = "antoni"
-        token = aux.refreshAuthorization(user, "4ee3679892e6ac5a5b513eba7fd529d363d7a96508421c5dbd44b01b349cf514")
+        #obtencion del proxy, que se introduce por argumentos
+        proxy = self.communicator().stringToProxy(argv[1])
+        main_c = IceFlix.MainPrx.checkedCast(proxy)
+        aux = AuthenticatorI(main_c)
+        user = "antonio"
+        user1= "ejemplo"
+        token = aux.refreshAuthorization(user, "passssss")
         print("token "+str(token))
 
-        if(token != None):
-            dictTokens[i]["user"] = user
-            dictTokens[i]["token"] = token
-            i = i+1
+        self.actualizarDictTokens(token, user)
+
+        print(dictTokens)
+
+        token = aux.refreshAuthorization(user1, "ssdd")
+        print("token "+str(token))
+
+        self.actualizarDictTokens(token, user1)
         
         print(dictTokens)
 
@@ -134,7 +153,9 @@ class ClientAuthentication(Ice.Application):
 
         usuarioToken = aux.whois(token)
         print("El token pertenece a "+str(usuarioToken))
-        aux.addUser("ssdd","ssdd","blassss")
+        aux.addUser("antonio","new password","blassss")
+        aux.removeUser("aneg","blassss")
 
 
-sys.exit(ClientAuthentication().main(sys.argv))
+if __name__ == "__main__":
+    ClientAuthentication().main(sys.argv)

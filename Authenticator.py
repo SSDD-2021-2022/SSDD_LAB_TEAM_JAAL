@@ -136,22 +136,8 @@ class ClientAuthentication(Ice.Application):
         proxy = self.communicator().stringToProxy(argv[1])
         main_c = IceFlix.MainPrx.checkedCast(proxy)
         aux = AuthenticatorI(main_c)
-       
-       #Crear proxy de authenticator para registrarlo llamando a register-->del main
-        broker = self.communicator()
-        servant = AuthenticatorI(main_c)
-        adapter = broker.createObjectAdapter("AuthenticatorAdapter")
-        time = datetime.datetime.now()
-        proxyAuth = adapter.add(servant, broker.stringToIdentity("Authenticator"+str(time.microsecond)))
-        print(proxyAuth, flush=False)
-        print(type(proxyAuth))
 
-        adapter.activate()
-        self.shutdownOnInterrupt()
-
-        main_c.register(proxyAuth)
-
-        user = "antonio"
+        user = "blas"
         user1= "ejemplo"
         token = aux.refreshAuthorization(user, "passssss")
         print("token "+str(token))
@@ -159,8 +145,25 @@ class ClientAuthentication(Ice.Application):
         self.actualizarDictTokens(token, user)
 
         print(dictTokens)
+       
+       #Crear proxy de authenticator para registrarlo llamando a register-->del main
+        broker = self.communicator()
+        servant = AuthenticatorI(main_c)
+        adapter = broker.createObjectAdapter("AuthenticatorAdapter")
+        #time = datetime.datetime.now()
+        proxyAuth = adapter.add(servant, broker.stringToIdentity("authenticator1"))
+        print(proxyAuth, flush=False)
+        
+        adapter.activate()
+        self.shutdownOnInterrupt()
+        pAuth= IceFlix.AuthenticatorPrx.checkedCast(proxyAuth)
+        main_c.register(pAuth)
+        broker.waitForShutdown()
+        return 0
 
-        token = aux.refreshAuthorization(user1, "ssdd")
+       
+
+        """token = aux.refreshAuthorization(user1, "ssdd")
         print("token "+str(token))
 
         self.actualizarDictTokens(token, user1)
@@ -173,7 +176,7 @@ class ClientAuthentication(Ice.Application):
         usuarioToken = aux.whois(token)
         print("El token pertenece a "+str(usuarioToken))
         aux.addUser("antonio","new password","blassss")
-        aux.removeUser("aneg","blassss")
+        aux.removeUser("aneg","blassss")"""
 
 
 if __name__ == "__main__":

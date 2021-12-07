@@ -18,12 +18,16 @@ Media = IceFlix.Media
 
 class MediaCatalogI(IceFlix.MediaCatalog):
 
+    def __init__(self, auth_c,main_c):
+        self.auth_c = auth_c
+        self.main_c = main_c
+
     def getTile(self, mediaId):
         data = json.loads(open('infoPeliculas.json').read())
         for ids in data:
             if(ids == mediaId):
                 tile = data[ids]
-        Media.mediaId = tile
+        Media.id = tile
         return Media
         
 
@@ -43,12 +47,13 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         return id
 
     def getTilesByTags(self, tags, allTags, userToken):
+        user = self.auth_c.whois(userToken)
         idAT = []
         id = []
         todasTags = 0
         data = json.loads(open('usuariosPeliculas.json').read())
 
-        user = "blas"
+        print(user)
         #comprobacion de que el usuario esta en el json
         for usuario in data["users"]:
             if (usuario["user"] == user):
@@ -58,18 +63,16 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                 tagsUsuario = usuario["tags"]
                 #se itera el json, peliculas --> id, tagsPelicula--> los tags de ese id de pelicula
                 for peliculas, tagsPelicula in tagsUsuario.items():
-                    print(peliculas)
-                    print(tagsPelicula)
-                    
+                   
                     for meTag in tags: #meTag--> cada una de las tag que se meten al metodo
                         if(meTag in tagsPelicula):
                             todasTags = todasTags+1
                             if(allTags == False):
                                 idAT.append(peliculas)
-                    print("variable todasTags "+str(todasTags))
+
                     if(todasTags == len(tags) and allTags):
                         id.append(peliculas)
-                        print("El id "+peliculas+" coincide con los 3 tags")
+
                     todasTags = 0
 
         if(allTags == False):
@@ -80,7 +83,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         return id
 
     def addTags(self, mediaId, tag, userToken):
-        user="blas"
+        user = self.auth_c.whois(userToken)
         data=json.loads(open('usuariosPeliculas.json').read())
 
         for usuario in data["users"]:
@@ -103,9 +106,9 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         
 
         #preguntar lo de poner idmedia y lo de autorized
-    def removeTags(self, mediaId, tags, adminToken, current=None):
+    def removeTags(self, mediaId, tags, userToken, current=None):
         try:
-            user = "antonio"
+            user = self.auth_c.whois(userToken)
             data = json.loads(open('usuariosPeliculas.json').read())
 
             for usuario in data["users"]:
@@ -128,36 +131,52 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
     def renameTile(self, mediaId, name, adminToken):
 
-        user = "blas"
-        data = json.loads(open('infoPeliculas.json').read())
+        if self.main_c.isAdmin(adminToken):
+            data = json.loads(open('infoPeliculas.json').read())
 
-        for ids in data:
-            if ids == mediaId:
-                data[ids] = name
+            for ids in data:
+                if ids == mediaId:
+                    data[ids] = name
     
-        with open('infoPeliculas.json', 'w') as data_file:
-            data = json.dump(data, data_file)
-
-    #def updateMedia(id, initialName, proveedor)
-
-class ClientAuthentication(Ice.Application):
+            with open('infoPeliculas.json', 'w') as data_file:
+                data = json.dump(data, data_file)
 
     
-    id = "id3"
-    nombre = "thor"
 
-    exact = False
-    tags = ["tag1"]
+class ClientCatalog(Ice.Application):
 
-    exact = True
-    tags = ["terror", "aventuta"]
+    def run(self, argv):
+        print(type(argv[1]))
+        proxy = self.communicator().stringToProxy(argv[1])
+        main_c = IceFlix.MainPrx.checkedCast(proxy)
+        print(proxy)
+        #proxyAuth = self.communicator().stringToProxy(argv[2])
+        print(main_c.getAuthenticator())
+        #proxyAuth = main_c.getAuthenticator()
+        #print(proxyAuth)
+        #auth_c = IceFlix.AuthenticatorPrx.checkedCast(proxyAuth)
+        #print(auth_c)
+        
+        #print(auth_c)
 
-    userToken = 0
+        #aux = MediaCatalogI(auth_c, main_c)
 
+        
+        id = "id3"
+        nombre = "thor"
 
-    aux = MediaCatalogI()
-    Media = aux.getTile(id)
-    print(Media.id)
+        exact = True
 
-    aux.removeTags("id3", tags, "hola")
-    print()
+        tags = ["terror", "aventuta"]
+
+        userToken = 0
+
+        #Media = aux.getTile(id)
+        #print(Media.id)
+
+        #dict = aux.getTilesByTags(tags, exact, "59cdd2c9b1c04021a9e50cdefc7ab4ac")
+        #aux.removeTags("id3", tags, "hola")
+        #print("resultado metodo "+str(dict))
+
+if __name__ == "__main__":
+    ClientCatalog().main(sys.argv)

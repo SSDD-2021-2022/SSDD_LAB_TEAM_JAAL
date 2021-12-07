@@ -4,11 +4,19 @@ import sys
 import Ice
 Ice.loadSlice('iceflix.ice')
 import IceFlix
+import Authenticator
+import random
 
-listaObjAuth = []
-listaObjCatg = []
+dictObjAuth = {0:{"id":"", "proxy":""}}
+dictObjCatg = {0:{"id":"", "proxy":""}}
+
+id = 0
+
 
 class MainI(IceFlix.Main):
+    listaObjAuth = []
+    listaObjCtg = []
+
     def isAdmin(self, adminToken, current = None):
         admin = False
 
@@ -22,22 +30,34 @@ class MainI(IceFlix.Main):
             #Se comprueba el tipo de objeto remoto que llega
             print(service.ice_id())
             if(service.ice_isA("::IceFlix::Authenticator")):
-                listaObjAuth.append(service)
+                self.listaObjAuth.append(service)
             if(service.ice_isA("::IceFlix::MediaCatalog")):
-                listaObjCatg.append(service)
-            print(listaObjAuth)
+                self.listaObjCtg.append(service)
+            print(dictObjAuth)
         except IceFlix.UnknownService:
             print("Servicio desconocido")
 
     def getAuthenticator(self, current=None):
-        try:
-            if(len(listaObjAuth) !=0 and listaObjAuth[0].ice_ping()):
-                print("holaaaaaaaaaaa")
-                return listaObjAuth[0]
-            else:
-                raise IceFlix.TemporaryUnavailable
-        except IceFlix.TemporaryUnavailable:
-            print("No hay ningun servicio de autenticacion abierto")
+        
+            
+        #print(listaObjAuth[0].ice_ping())
+
+        if(not self.listaObjAuth):
+            raise IceFlix.TemporaryUnavailable
+            #proxyA = self.communicator().stringToProxy(proxyPE)
+            #auth_c = Authenticator.AuthenticatorI(proxyA)
+            
+            #servant = Authenticator.AuthenticatorI("AuthenticationAdapter")
+            #proxyA = current.adapter.add(servant, Ice.stringToIdentity(proxyPE))
+            
+            #print(proxyAuth)
+        proxyAuth = random.choice(self.listaObjAuth)
+        print(proxyAuth)
+        print(proxyAuth.ice_ping())
+        #if(proxyAuth.ice_ping()):
+        return IceFlix.AuthenticatorPrx.uncheckedCast(proxyAuth)
+            
+        
     
     def getCatalog(self, current=None):
         try:
@@ -52,7 +72,7 @@ class ServerMain(Ice.Application):
     def run(self, args):
         broker = self.communicator()
         servant = MainI()
-        servant.getAuthenticator()
+        #servant.getAuthenticator()
         adapter = broker.createObjectAdapter("MainAdapter")
         proxy = adapter.add(servant, broker.stringToIdentity("main1"))
 

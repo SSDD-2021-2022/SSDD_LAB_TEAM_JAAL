@@ -176,5 +176,5 @@ class ClientAuthentication(Ice.Application):
         aux.removeUser("aneg","blassss")"""
 
 
-if _name_ == "_main_":
+if __name__ == "_main_":
     ClientAuthentication().main(sys.argv)

@@ -18,17 +18,22 @@ Media = IceFlix.Media
 
 class MediaCatalogI(IceFlix.MediaCatalog):
 
-    def __init__(self, auth_c,main_c):
+    def _init_(self, auth_c,main_c):
         self.auth_c = auth_c
         self.main_c = main_c
 
     def getTile(self, mediaId):
+        media = IceFlix.Media
+        mediaInfo = IceFlix.MediaInfo
         data = json.loads(open('infoPeliculas.json').read())
         for ids in data:
             if(ids == mediaId):
                 tile = data[ids]
-        Media.id = tile
-        return Media
+
+        mediaInfo.name = tile
+        media.mediaId = mediaId
+        media.info = mediaInfo
+        return media
         
 
     def getTilesByName(self, name, exact):
@@ -57,7 +62,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         #comprobacion de que el usuario esta en el json
         for usuario in data["users"]:
             if (usuario["user"] == user):
-#                print("el usuario existe ---> ", user)
+            #print("el usuario existe ---> ", user)
                 
                 #sacamos las tags del usuario
                 tagsUsuario = usuario["tags"]
@@ -147,19 +152,15 @@ class ClientCatalog(Ice.Application):
 
     def run(self, argv):
         print(type(argv[1]))
-        proxy = self.communicator().stringToProxy(argv[1])
+        proxyMain = open("salida").read()
+        proxy = self.communicator().stringToProxy(proxyMain)
         main_c = IceFlix.MainPrx.checkedCast(proxy)
         print(proxy)
         #proxyAuth = self.communicator().stringToProxy(argv[2])
         print(main_c.getAuthenticator())
-        #proxyAuth = main_c.getAuthenticator()
-        #print(proxyAuth)
-        #auth_c = IceFlix.AuthenticatorPrx.checkedCast(proxyAuth)
-        #print(auth_c)
+        auth_c = main_c.getAuthenticator()
         
-        #print(auth_c)
-
-        #aux = MediaCatalogI(auth_c, main_c)
+        aux = MediaCatalogI(auth_c, main_c)
 
         
         id = "id3"
@@ -171,12 +172,12 @@ class ClientCatalog(Ice.Application):
 
         userToken = 0
 
-        #Media = aux.getTile(id)
-        #print(Media.id)
+        Media = aux.getTile(id)
+        print(Media.info.name)
 
         #dict = aux.getTilesByTags(tags, exact, "59cdd2c9b1c04021a9e50cdefc7ab4ac")
         #aux.removeTags("id3", tags, "hola")
         #print("resultado metodo "+str(dict))
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     ClientCatalog().main(sys.argv)

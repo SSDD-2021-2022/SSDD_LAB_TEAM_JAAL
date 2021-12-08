@@ -17,6 +17,7 @@ class MainI(IceFlix.Main):
     listaObjAuth = []
     listaObjCtg = []
 
+
     def isAdmin(self, adminToken, current = None):
         admin = False
 
@@ -44,30 +45,40 @@ class MainI(IceFlix.Main):
 
         if(not self.listaObjAuth):
             raise IceFlix.TemporaryUnavailable
-            #proxyA = self.communicator().stringToProxy(proxyPE)
-            #auth_c = Authenticator.AuthenticatorI(proxyA)
             
-            #servant = Authenticator.AuthenticatorI("AuthenticationAdapter")
-            #proxyA = current.adapter.add(servant, Ice.stringToIdentity(proxyPE))
-            
-            #print(proxyAuth)
         proxyAuth = random.choice(self.listaObjAuth)
         print(proxyAuth)
-        print(proxyAuth.ice_ping())
-        #if(proxyAuth.ice_ping()):
+        try:
+            proxyAuth.ice_ping()
+
+        except Ice.ConnectionRefusedException:
+            print("proxy inexistente")
+            self.listaObjAuth.remove(proxyAuth) 
+            raise IceFlix.TemporaryUnavailable
+            
+            
+
         return IceFlix.AuthenticatorPrx.uncheckedCast(proxyAuth)
+        
             
         
     
     def getCatalog(self, current=None):
-        try:
-            if(len(listaObjCatg) !=0 and listaObjCatg[0].ice_ping()):
-                return listaObjCatg[0]
-            else:
-                raise IceFlix.TemporaryUnavailable
-        except IceFlix.TemporaryUnavailable:
-            print("No hay ningun servicio de catalogo abierto")
 
+        if(not self.listaObjCtg):
+            raise IceFlix.TemporaryUnavailable
+            
+        proxyCtg = random.choice(self.listaObjCtg)
+        print(proxyCtg)
+        try:
+            proxyCtg.ice_ping()
+
+        except Ice.ConnectionRefusedException:
+            print("proxy inexistente")
+            self.listaObjCtg.remove(proxyCtg) 
+            raise IceFlix.TemporaryUnavailable
+            
+        return IceFlix.MediaCatalogPrx.uncheckedCast(proxyCtg)
 class ServerMain(Ice.Application):
     def run(self, args):
         broker = self.communicator()
@@ -83,7 +94,7 @@ class ServerMain(Ice.Application):
         broker.waitForShutdown()
         return 0
 
-if __name__ == '__main__':
+if _name_ == '_main_':
     app=ServerMain()
     exit_status = app.main(sys.argv)
     sys.exit(exit_status)

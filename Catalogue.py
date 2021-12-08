@@ -18,7 +18,7 @@ Media = IceFlix.Media
 
 class MediaCatalogI(IceFlix.MediaCatalog):
 
-    def _init_(self, auth_c,main_c):
+    def __init__(self, auth_c,main_c):
         self.auth_c = auth_c
         self.main_c = main_c
 
@@ -179,5 +179,5 @@ class ClientCatalog(Ice.Application):
         #aux.removeTags("id3", tags, "hola")
         #print("resultado metodo "+str(dict))
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     ClientCatalog().main(sys.argv)

@@ -94,7 +94,7 @@ class ServerMain(Ice.Application):
         broker.waitForShutdown()
         return 0
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     app=ServerMain()
     exit_status = app.main(sys.argv)
     sys.exit(exit_status)

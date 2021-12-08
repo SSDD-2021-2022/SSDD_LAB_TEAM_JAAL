@@ -12,13 +12,14 @@ import Ice
 Ice.loadSlice('iceflix.ice')
 import IceFlix
 
-dictTokens = { 0:{"user": "", "token":""}}
-i = 0
+
 #communicator = None
 
 class AuthenticatorI(IceFlix.Authenticator):
+    dictTokens = { 0:{"user": "", "token":""}}
+    i = 0
 
-    def __init__(self, main_c):
+    def _init_(self, main_c):
         self.main_c = main_c
 
     def refreshAuthorization(self,user, passwordHash, current=None): #Metodo para crear un nuevo token (recibe user y hash de la password)
@@ -39,6 +40,13 @@ class AuthenticatorI(IceFlix.Authenticator):
             if token == None:
                 raise IceFlix.Unauthorized()
 
+            if(token != None):
+                print(self.i)
+                self.dictTokens[self.i] = {"user":str(user), "token":str(token)}
+                self.i = self.i+1
+
+            print("diccionario "+self.dictTokens)
+
             return token
 
         except IceFlix.Unauthorized as error:
@@ -50,8 +58,8 @@ class AuthenticatorI(IceFlix.Authenticator):
     def isAuthorized(self, userToken, current = None):
         isAuth = False
         
-        for element in dictTokens:
-            if userToken == dictTokens[element]["token"]:
+        for element in self.dictTokens:
+            if userToken == self.dictTokens[element]["token"]:
                 isAuth = True
 
 
@@ -60,9 +68,9 @@ class AuthenticatorI(IceFlix.Authenticator):
     def whois(self, userToken, current = None):
         user = None
         try:
-            for element in dictTokens:
-                if userToken == dictTokens[element]["token"]:
-                    user = dictTokens[element]["user"]
+            for element in self.dictTokens:
+                if userToken == self.dictTokens[element]["token"]:
+                    user = self.dictTokens[element]["user"]
             
             if(user == None):
                 raise IceFlix.Unauthorized()
@@ -115,6 +123,7 @@ class AuthenticatorI(IceFlix.Authenticator):
 
                 with open('credenciales.json', 'w') as data_file:
                     data = json.dump(data, data_file)
+            print("Usuario "+user+" eliminado")
         
         except IceFlix.Unauthorized as error:
             print("Usuario no autorizado")
@@ -122,29 +131,17 @@ class AuthenticatorI(IceFlix.Authenticator):
 
 class ClientAuthentication(Ice.Application):
 
-    def actualizarDictTokens(self,token, user):
-        global i
-        if(token != None):
-            print(i)
-            dictTokens[i] = {"user":str(user), "token":str(token)}
-            i = i+1
+    
 
 
     def run(self,argv):
         
         #obtencion del proxy, que se introduce por argumentos
-        proxy = self.communicator().stringToProxy(argv[1])
+        proxyMain = open("salida").read()
+        proxy = self.communicator().stringToProxy(proxyMain)
         main_c = IceFlix.MainPrx.checkedCast(proxy)
         aux = AuthenticatorI(main_c)
 
-        user = "blas"
-        user1= "ejemplo"
-        token = aux.refreshAuthorization(user, "passssss")
-        print("token "+str(token))
-
-        self.actualizarDictTokens(token, user)
-
-        print(dictTokens)
        
        #Crear proxy de authenticator para registrarlo llamando a register-->del main
         broker = self.communicator()
@@ -179,5 +176,5 @@ class ClientAuthentication(Ice.Application):
         aux.removeUser("aneg","blassss")"""
 
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     ClientAuthentication().main(sys.argv)

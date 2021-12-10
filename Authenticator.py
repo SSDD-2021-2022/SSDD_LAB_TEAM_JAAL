@@ -27,7 +27,7 @@ class AuthenticatorI(IceFlix.Authenticator):
             #usuario = user
             #passw = passwordHash
 
-            token = None
+            token = ""
             data = json.loads(open('credenciales.json').read())
 
             for usuario in data['users']:
@@ -38,7 +38,7 @@ class AuthenticatorI(IceFlix.Authenticator):
                     token = uuid.uuid4().hex
             
             if token == None:
-                raise IceFlix.Unauthorized()
+                raise IceFlix.Unauthorized
 
             if(token != None):
                 print(self.i)
@@ -51,10 +51,9 @@ class AuthenticatorI(IceFlix.Authenticator):
 
         except IceFlix.Unauthorized as error:
             print("Usuario no autorizado")
-            return None
+            return ""
             
             
-    
     def isAuthorized(self, userToken, current = None):
         isAuth = False
         

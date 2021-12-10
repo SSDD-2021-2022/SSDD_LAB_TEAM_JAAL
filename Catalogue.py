@@ -17,19 +17,26 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         self.main_c = main_c
 
     def getTile(self, mediaId, current=None):
-        tile = "Ese id no corresponde a ninguna película"
-        #MediaInfo = IceFlix.MediaInfo
-        #Media = IceFlix.Media
-        media = IceFlix.Media()
-        mediaInfo = IceFlix.MediaInfo()
-        data = json.loads(open('infoPeliculas.json').read())
-        for ids in data:
-            if(ids == mediaId):
-                tile = data[ids]
-        #print(tile)
-        mediaInfo.name = tile
-        media.mediaId = mediaId
-        media.info = mediaInfo
+        try:
+            continuar = False
+            #PREGUNTAR
+            tile=""
+            media = IceFlix.Media()
+            mediaInfo = IceFlix.MediaInfo()
+            data = json.loads(open('infoPeliculas.json').read())
+            for ids in data:
+                if(ids == mediaId):
+                    tile = data[ids]
+                    continuar=True
+            if(continuar==False):
+                raise IceFlix.WrongMediaId
+            mediaInfo.name = tile
+            media.mediaId = mediaId
+            media.info = mediaInfo
+        except IceFlix.WrongMediaId:
+            print("Id de la pelicula incorrecto\n")
+        except IceFlix.TemporaryUnavailable:
+            print("Error\n")
         return media
         
 
@@ -49,103 +56,133 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         return id
 
     def getTilesByTags(self, tags, allTags, userToken, current=None):
-        user = self.auth_c.whois(userToken)
-        idAT = []
-        id = []
-        todasTags = 0
-        data = json.loads(open('usuariosPeliculas.json').read())
+        try: 
+            user = self.auth_c.whois(userToken)
+            if(user==None):
+                raise IceFlix.Unauthorized
+            else: 
+                idAT = []
+                id = []
+                todasTags = 0
+                data = json.loads(open('usuariosPeliculas.json').read())
 
-        print(user)
-        #comprobacion de que el usuario esta en el json
-        for usuario in data["users"]:
-            if (usuario["user"] == user):
-#                print("el usuario existe ---> ", user)
-                
-                #sacamos las tags del usuario
-                tagsUsuario = usuario["tags"]
-                #se itera el json, peliculas --> id, tagsPelicula--> los tags de ese id de pelicula
-                for peliculas, tagsPelicula in tagsUsuario.items():
-                   
-                    for meTag in tags: #meTag--> cada una de las tag que se meten al metodo
-                        if(meTag in tagsPelicula):
-                            todasTags = todasTags+1
-                            if(allTags == False):
-                                idAT.append(peliculas)
+                print(user)
+                #comprobacion de que el usuario esta en el json
+                for usuario in data["users"]:
+                    if (usuario["user"] == user):
+                        #sacamos las tags del usuario
+                        tagsUsuario = usuario["tags"]
+                        #se itera el json, peliculas --> id, tagsPelicula--> los tags de ese id de pelicula
+                        for peliculas, tagsPelicula in tagsUsuario.items():
+                        
+                            for meTag in tags: #meTag--> cada una de las tag que se meten al metodo
+                                if(meTag in tagsPelicula):
+                                    todasTags = todasTags+1
+                                    if(allTags == False):
+                                        idAT.append(peliculas)
 
-                    if(todasTags == len(tags) and allTags):
-                        id.append(peliculas)
+                            if(todasTags == len(tags) and allTags):
+                                id.append(peliculas)
 
-                    todasTags = 0
+                            todasTags = 0
 
-        if(allTags == False):
-            for i in idAT:
-                if i not in id:
-                    id.append(i)
-
+                if(allTags == False):
+                    for i in idAT:
+                        if i not in id:
+                            id.append(i)
+        except IceFlix.Unauthorized:
+            print("Usuario no autorizado.")
         return id
 
     def addTags(self, mediaId, tag, userToken, current=None):
-        user = self.auth_c.whois(userToken)
-        data=json.loads(open('usuariosPeliculas.json').read())
+        try:
+            user = self.auth_c.whois(userToken)
+            if(user==None):
+                raise IceFlix.Unauthorized
+            else:
+                data=json.loads(open('usuariosPeliculas.json').read())
+                continuar=False
+                for usuario in data["users"]:
+                    if usuario["user"] == user:
+                        listaTagsUsuario = usuario["tags"]
+                        for id_pel, tagsUser in listaTagsUsuario.items():
+                            print(str(id_pel)+" "+str(tagsUser))
+                            if id_pel == mediaId:
+                                continuar=True  
+                                for j in tag:
+                                    if(j in tagsUser):
+                                        tag.remove(j)
+                                    else:
+                                        tagsUser.append(j)
+                                        print(j)
+                                        print(tagsUser)
+                with open('usuariosPeliculas.json', 'w') as data_file:
+                    data = json.dump(data, data_file)
 
-        for usuario in data["users"]:
-            if usuario["user"] == user:
-                listaTagsUsuario = usuario["tags"]
-                for id_pel, tagsUser in listaTagsUsuario.items():
-                    print(str(id_pel)+" "+str(tagsUser))
-                    if id_pel == mediaId:  
-                        for j in tag:
-                            if(j in tagsUser):
-                                tag.remove(j)
-                            else:
-                                tagsUser.append(j)
-                                print(j)
-                                print(tagsUser)
-        
-        with open('usuariosPeliculas.json', 'w') as data_file:
-            data = json.dump(data, data_file)
-
+            if(continuar==False):
+                raise IceFlix.WrongMediaId
+  
+        except IceFlix.WrongMediaId:
+            print("Id no valido\n")
+        except IceFlix.Unauthorized:
+            print("Usuario no autorizado.")
         
 
         #preguntar lo de poner idmedia y lo de autorized
     def removeTags(self, mediaId, tags, userToken, current=None):
         try:
             user = self.auth_c.whois(userToken)
-            data = json.loads(open('usuariosPeliculas.json').read())
+            if(user==None):
+                raise IceFlix.Unauthorized
+            else:
+                data = json.loads(open('usuariosPeliculas.json').read())
+                continuar=False
 
-            for usuario in data["users"]:
-                if usuario["user"] == user:
-                    listaTagsUsuario = usuario["tags"]
-                    for id_pel, tagsUser in listaTagsUsuario.items():
-                        print(str(id_pel)+" "+str(tagsUser))
-                        if id_pel == mediaId:
-                            for tagParametro in tags:
-                                if tagParametro in tagsUser:
-                                    tagsUser.remove(tagParametro)
-                                    print(str(tagParametro)+" eliminado")
-                                    print(tagsUser)
-                                    
-            with open('usuariosPeliculas.json', 'w') as data_file:
-                data = json.dump(data, data_file)
-        except IceFlix.Unauthorized as error:
+                for usuario in data["users"]:
+                    if usuario["user"] == user:
+                        listaTagsUsuario = usuario["tags"]
+                        for id_pel, tagsUser in listaTagsUsuario.items():
+                            print(str(id_pel)+" "+str(tagsUser))
+                            if id_pel == mediaId:
+                                continuar=True
+                                for tagParametro in tags:
+                                    if tagParametro in tagsUser:
+                                        tagsUser.remove(tagParametro)
+                                        print(str(tagParametro)+" eliminado")
+                                        print(tagsUser)
+                                        
+                with open('usuariosPeliculas.json', 'w') as data_file:
+                    data = json.dump(data, data_file)
+            if(continuar==False):
+                raise IceFlix.WrongMediaId
+        except IceFlix.Unauthorized:
             print("usuario no autorizado")
-            sys.exit(1)
+        except IceFlix.WrongMediaId:
+            print("Id de la pelicula incorrecto")
 
     def renameTile(self, mediaId, name, adminToken, current=None):
+        try:
+            if self.main_c.isAdmin(adminToken):
+                data = json.loads(open('infoPeliculas.json').read())
+                continuar=False
 
-        if self.main_c.isAdmin(adminToken):
-            data = json.loads(open('infoPeliculas.json').read())
+                for ids in data:
+                    if ids == mediaId:
+                        continuar=True
+                        data[ids] = name
+        
+                with open('infoPeliculas.json', 'w') as data_file:
+                    data = json.dump(data, data_file)
+            else:
+                raise IceFlix.Unauthorized 
+            if(continuar==False):
+                raise IceFlix.WrongMediaId
+        except IceFlix.Unauthorized:
+            print("usuario no autorizado")
+        except IceFlix.WrongMediaId:
+            print("Id de la pelicula incorrecto")
 
-            for ids in data:
-                if ids == mediaId:
-                    data[ids] = name
-    
-            with open('infoPeliculas.json', 'w') as data_file:
-                data = json.dump(data, data_file)
-
-    
-
-class ClientCatalog(Ice.Application):
+class ClientCatalog(Ice.Application):    
 
     def run(self, argv):
         

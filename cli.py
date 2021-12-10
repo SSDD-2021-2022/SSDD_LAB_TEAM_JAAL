@@ -55,7 +55,7 @@ class Client(Ice.Application):
                 user = input("Introduce usuario:\n")
                 password = getpass.getpass("Introduzca contraseña:\n")
                 passSha = hashlib.sha256(password.encode()).hexdigest()
-                userToken = None
+                userToken = ""
                 
                 userToken = main.getAuthenticator().refreshAuthorization(user, passSha)
                 print(userToken)

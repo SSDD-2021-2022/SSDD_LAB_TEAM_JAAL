@@ -1,1 +1,9 @@
-main1 -t -e 1.1:tcp -h 192.168.0.203 -p 35283 -t 60000
+main1 -t -e 1.1:tcp -h 192.168.1.64 -p 35013 -t 60000
+::IceFlix::Authenticator
+authenticator1 -t -e 1.1:tcp -h 192.168.1.64 -p 34049 -t 60000
+::IceFlix::MediaCatalog
+[mediacatalog1 -t -e 1.1:tcp -h 192.168.1.64 -p 43863 -t 60000]
+authenticator1 -t -e 1.1:tcp -h 192.168.1.64 -p 34049 -t 60000
+mediacatalog1 -t -e 1.1:tcp -h 192.168.1.64 -p 43863 -t 60000
+mediacatalog1 -t -e 1.1:tcp -h 192.168.1.64 -p 43863 -t 60000
+mediacatalog1 -t -e 1.1:tcp -h 192.168.1.64 -p 43863 -t 60000

@@ -13,8 +13,6 @@ Ice.loadSlice('iceflix.ice')
 import IceFlix
 
 
-#communicator = None
-
 class AuthenticatorI(IceFlix.Authenticator):
     dictTokens = { 0:{"user": "", "token":""}}
     i = 0
@@ -27,7 +25,7 @@ class AuthenticatorI(IceFlix.Authenticator):
             #usuario = user
             #passw = passwordHash
 
-            token = None
+            token = ""
             data = json.loads(open('credenciales.json').read())
 
             for usuario in data['users']:
@@ -37,10 +35,10 @@ class AuthenticatorI(IceFlix.Authenticator):
                 if  (userJSON == user and passHashJSON == passwordHash):
                     token = uuid.uuid4().hex
             
-            if token is None:
+            if (token == ""):
                 raise IceFlix.Unauthorized
 
-            if(token is not None):
+            if(token != ""):
                 #print(self.i)
                 self.dictTokens[self.i] = {"user":str(user), "token":str(token)}
                 self.i = self.i+1
@@ -49,9 +47,9 @@ class AuthenticatorI(IceFlix.Authenticator):
 
             return token
 
-        except IceFlix.Unauthorized as error:
-            print("Usuario no autorizadoksdngks")
-            return None
+        except IceFlix.Unauthorized:
+            print("Usuario no autorizado")
+            
             
             
     def isAuthorized(self, userToken, current = None):
@@ -65,21 +63,19 @@ class AuthenticatorI(IceFlix.Authenticator):
         return isAuth
 
     def whois(self, userToken, current = None):
-        user = None
+        user = ""
         try:
             for element in self.dictTokens:
                 if userToken == self.dictTokens[element]["token"]:
                     user = self.dictTokens[element]["user"]
             
-            if(user is None):
-                print("blasssssssssssssssssss")
+            if (user == ""):
                 raise IceFlix.Unauthorized
 
             return user
         
         except IceFlix.Unauthorized:
             print("Usuario no autorizado")
-            return None
 
     def addUser(self, user, passwordHash, adminToken, current = None):
         try: 
@@ -107,7 +103,7 @@ class AuthenticatorI(IceFlix.Authenticator):
                 with open('credenciales.json', 'w') as data_file:
                     data = json.dump(data, data_file)
         
-        except IceFlix.Unauthorized as error:
+        except IceFlix.Unauthorized:
             print("Usuario no autorizado")
 
     def removeUser(self, user, adminToken, current = None):
@@ -125,7 +121,7 @@ class AuthenticatorI(IceFlix.Authenticator):
                     data = json.dump(data, data_file)
             print("Usuario "+user+" eliminado")
         
-        except IceFlix.Unauthorized as error:
+        except IceFlix.Unauthorized:
             print("Usuario no autorizado")
             #sys.exit(1)
 

@@ -55,45 +55,38 @@ class Client(Ice.Application):
                 user = input("Introduce usuario:\n")
                 password = getpass.getpass("Introduzca contraseña:\n")
                 passSha = hashlib.sha256(password.encode()).hexdigest()
-                userToken = ""
+                userToken = None
                 
                 userToken = main.getAuthenticator().refreshAuthorization(user, passSha)
-                
-                if userToken == "":
-                    print("Usuario no existente o  contraseña errónea")
-                    
-                else:
-                    mostrarMenuC = True
-                    while(mostrarMenuC):
-                        opcion_catalogo = input("Elija si quiere hacer alguna gestión de catálogo o prefiere salir.\n1. Obtener título por tags\n2. Añadir tags a un determinado medio\n3. Borrar tags\n4. Volver al menú\n")
-                        if(opcion_catalogo == "1"):
-                            tags = input("Introduzca las tags que quiera buscar separandolas por el caracter ','\n")
-                            listaTags = tags.split(",")
-                            todosTags = False
-                            incTags=input("¿Desea mostrar todos los ids con algun tag de los que intriduce por teclado (1) o por el contrario el medio con esos tags específicos(2)\n")
-                            if(incTags == "2"):
-                                todosTags = True
-                            print(main.getCatalog().getTilesByTags(listaTags, todosTags, userToken))
+                print(userToken)
+            
+                mostrarMenuC = True
+                while(mostrarMenuC):
+                    opcion_catalogo = input("Elija si quiere hacer alguna gestión de catálogo o prefiere salir.\n1. Obtener título por tags\n2. Añadir tags a un determinado medio\n3. Borrar tags\n4. Volver al menú\n")
+                    if(opcion_catalogo == "1"):
+                        tags = input("Introduzca las tags que quiera buscar separandolas por el caracter ','\n")
+                        listaTags = tags.split(",")
+                        todosTags = False
+                        incTags=input("¿Desea mostrar todos los ids con algun tag de los que intriduce por teclado (1) o por el contrario el medio con esos tags específicos(2)\n")
+                        if(incTags == "2"):
+                            todosTags = True
+                        print(main.getCatalog().getTilesByTags(listaTags, todosTags, userToken))
 
-                        elif(opcion_catalogo == "2"):
-                            id = input("Introduzca id del medio al que quiera añadir las tags\n")
-                            tags = input("Introduzca las tags que quiera añadir separandolas por el caracter ','\n")
-                            listaTags = tags.split(",")
+                    elif(opcion_catalogo == "2"):
+                        id = input("Introduzca id del medio al que quiera añadir las tags\n")
+                        tags = input("Introduzca las tags que quiera añadir separandolas por el caracter ','\n")
+                        listaTags = tags.split(",")
 
-                            print(main.getCatalog().addTags(id, listaTags, userToken))
-                            print("tags "+str(listaTags)+" añadidas al medio "+str(id))
-                            #else:
-                                #print("No se han podido añadir los tags de forma correcta")
+                        main.getCatalog().addTags(id, listaTags, userToken)
                         
-                        elif(opcion_catalogo == "3"):
-                            id = input("Introduzca id del medio al que quiera borrar las tags\n")
-                            tags = input("Introduzca las tags que quiera borrar separandolas por el caracter ','\n")
-                            listaTags = tags.split(",")
+                    elif(opcion_catalogo == "3"):
+                        id = input("Introduzca id del medio al que quiera borrar las tags\n")
+                        tags = input("Introduzca las tags que quiera borrar separandolas por el caracter ','\n")
+                        listaTags = tags.split(",")
+                        main.getCatalog().removeTags(id, listaTags, userToken)
 
-                            print(main.getCatalog().removeTags(id, listaTags, userToken))
-                            print("tags "+str(listaTags)+" borradas del medio "+str(id))
-                        else:
-                            mostrarMenuC = False
+                    else:
+                        mostrarMenuC = False
                 
 
             elif(conectar_opcion == "3"):

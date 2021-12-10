@@ -58,38 +58,38 @@ class MediaCatalogI(IceFlix.MediaCatalog):
     def getTilesByTags(self, tags, allTags, userToken, current=None):
         try: 
             user = self.auth_c.whois(userToken)
-            if(user==None):
+            if(user is None):
                 raise IceFlix.Unauthorized
-            else: 
-                idAT = []
-                id = []
-                todasTags = 0
-                data = json.loads(open('usuariosPeliculas.json').read())
+        
+            idAT = []
+            id = []
+            todasTags = 0
+            data = json.loads(open('usuariosPeliculas.json').read())
 
-                print(user)
-                #comprobacion de que el usuario esta en el json
-                for usuario in data["users"]:
-                    if (usuario["user"] == user):
-                        #sacamos las tags del usuario
-                        tagsUsuario = usuario["tags"]
-                        #se itera el json, peliculas --> id, tagsPelicula--> los tags de ese id de pelicula
-                        for peliculas, tagsPelicula in tagsUsuario.items():
-                        
-                            for meTag in tags: #meTag--> cada una de las tag que se meten al metodo
-                                if(meTag in tagsPelicula):
-                                    todasTags = todasTags+1
-                                    if(allTags == False):
-                                        idAT.append(peliculas)
+            print(user)
+            #comprobacion de que el usuario esta en el json
+            for usuario in data["users"]:
+                if (usuario["user"] == user):
+                    #sacamos las tags del usuario
+                    tagsUsuario = usuario["tags"]
+                    #se itera el json, peliculas --> id, tagsPelicula--> los tags de ese id de pelicula
+                    for peliculas, tagsPelicula in tagsUsuario.items():
+                    
+                        for meTag in tags: #meTag--> cada una de las tag que se meten al metodo
+                            if(meTag in tagsPelicula):
+                                todasTags = todasTags+1
+                                if(allTags == False):
+                                    idAT.append(peliculas)
 
-                            if(todasTags == len(tags) and allTags):
-                                id.append(peliculas)
+                        if(todasTags == len(tags) and allTags):
+                            id.append(peliculas)
 
-                            todasTags = 0
+                        todasTags = 0
 
-                if(allTags == False):
-                    for i in idAT:
-                        if i not in id:
-                            id.append(i)
+            if(allTags == False):
+                for i in idAT:
+                    if i not in id:
+                        id.append(i)
         except IceFlix.Unauthorized:
             print("Usuario no autorizado.")
         return id
@@ -97,27 +97,27 @@ class MediaCatalogI(IceFlix.MediaCatalog):
     def addTags(self, mediaId, tag, userToken, current=None):
         try:
             user = self.auth_c.whois(userToken)
-            if(user==None):
+            if(user is None):
                 raise IceFlix.Unauthorized
-            else:
-                data=json.loads(open('usuariosPeliculas.json').read())
-                continuar=False
-                for usuario in data["users"]:
-                    if usuario["user"] == user:
-                        listaTagsUsuario = usuario["tags"]
-                        for id_pel, tagsUser in listaTagsUsuario.items():
-                            print(str(id_pel)+" "+str(tagsUser))
-                            if id_pel == mediaId:
-                                continuar=True  
-                                for j in tag:
-                                    if(j in tagsUser):
-                                        tag.remove(j)
-                                    else:
-                                        tagsUser.append(j)
-                                        print(j)
-                                        print(tagsUser)
-                with open('usuariosPeliculas.json', 'w') as data_file:
-                    data = json.dump(data, data_file)
+            
+            data=json.loads(open('usuariosPeliculas.json').read())
+            continuar=False
+            for usuario in data["users"]:
+                if usuario["user"] == user:
+                    listaTagsUsuario = usuario["tags"]
+                    for id_pel, tagsUser in listaTagsUsuario.items():
+                        print(str(id_pel)+" "+str(tagsUser))
+                        if id_pel == mediaId:
+                            continuar=True  
+                            for j in tag:
+                                if(j in tagsUser):
+                                    tag.remove(j)
+                                else:
+                                    tagsUser.append(j)
+                                    print(j)
+                                    print(tagsUser)
+            with open('usuariosPeliculas.json', 'w') as data_file:
+                data = json.dump(data, data_file)
 
             if(continuar==False):
                 raise IceFlix.WrongMediaId
@@ -132,27 +132,27 @@ class MediaCatalogI(IceFlix.MediaCatalog):
     def removeTags(self, mediaId, tags, userToken, current=None):
         try:
             user = self.auth_c.whois(userToken)
-            if(user==None):
+            if(user is None):
                 raise IceFlix.Unauthorized
-            else:
-                data = json.loads(open('usuariosPeliculas.json').read())
-                continuar=False
+            
+            data = json.loads(open('usuariosPeliculas.json').read())
+            continuar=False
 
-                for usuario in data["users"]:
-                    if usuario["user"] == user:
-                        listaTagsUsuario = usuario["tags"]
-                        for id_pel, tagsUser in listaTagsUsuario.items():
-                            print(str(id_pel)+" "+str(tagsUser))
-                            if id_pel == mediaId:
-                                continuar=True
-                                for tagParametro in tags:
-                                    if tagParametro in tagsUser:
-                                        tagsUser.remove(tagParametro)
-                                        print(str(tagParametro)+" eliminado")
-                                        print(tagsUser)
-                                        
-                with open('usuariosPeliculas.json', 'w') as data_file:
-                    data = json.dump(data, data_file)
+            for usuario in data["users"]:
+                if usuario["user"] == user:
+                    listaTagsUsuario = usuario["tags"]
+                    for id_pel, tagsUser in listaTagsUsuario.items():
+                        print(str(id_pel)+" "+str(tagsUser))
+                        if id_pel == mediaId:
+                            continuar=True
+                            for tagParametro in tags:
+                                if tagParametro in tagsUser:
+                                    tagsUser.remove(tagParametro)
+                                    print(str(tagParametro)+" eliminado")
+                                    print(tagsUser)
+                                    
+            with open('usuariosPeliculas.json', 'w') as data_file:
+                data = json.dump(data, data_file)
             if(continuar==False):
                 raise IceFlix.WrongMediaId
         except IceFlix.Unauthorized:

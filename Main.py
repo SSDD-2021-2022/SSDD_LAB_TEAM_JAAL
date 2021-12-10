@@ -31,9 +31,12 @@ class MainI(IceFlix.Main):
             print(service.ice_id())
             if(service.ice_isA("::IceFlix::Authenticator")):
                 self.listaObjAuth.append(service)
-            if(service.ice_isA("::IceFlix::MediaCatalog")):
+            elif(service.ice_isA("::IceFlix::MediaCatalog")):
                 self.listaObjCtg.append(service)
                 print(self.listaObjCtg)
+            else:
+                raise IceFlix.UnknownService
+                
         except IceFlix.UnknownService:
             print("Servicio desconocido")
 

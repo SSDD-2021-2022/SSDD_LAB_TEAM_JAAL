@@ -31,7 +31,7 @@ https://github.com/SSDD-2021-2022/SSDD_LAB_TEAM_JAAL
  
  Una vez lanzado el cliente, se mostrará un menú interactivo al usuario para poder ejecutar las diferentes funciones implementadas en el sistema. El primer menú está compuesto de las siguientes opciones:
  * **"1. Conectar"**: opción necesaria para realizar cualquier operación. Si funciona correctamente, informará al usuario de que se ha conectado al sistema.
- * **"2. Autenticar"**: opción previa para acceder a los servicios del sistema distribuido. Debe poner los siguientes datos:
+ * **"2. Autenticar"**: opción previa para acceder a los servicios del sistema distribuido. Debe poner los siguientes datos si quiere acceder al sistema de forma correcta:
     - *usuario*: blas
     - *contraseña*: blas
     

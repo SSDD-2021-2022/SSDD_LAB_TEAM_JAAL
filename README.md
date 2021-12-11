@@ -39,9 +39,7 @@ https://github.com/SSDD-2021-2022/SSDD_LAB_TEAM_JAAL
        
     * **"1. Obtener título por tags"**: se pedirán unos tags al usuario (separados por ',') que servirán como referencia para buscar películas en la base de datos. Las películas que se muestran pueden ser de una búsqueda estricta por tags o simplemente que los contenga.
     * **"2. Añadir tags a un determinado medio"**: se añadirán los tags pedidos al usuario a una determinada película.
-      
     * **"3. Borrar tags"**: se eliminarán los tags demandados por el usuario a una determinada película.
-     
     * **"4. Volver al menú"**: vuelve al menú principal.
     
  * **"3. Opciones de administración"**: contiene funciones dedicadas al administrador del sistema. Para entrar en este área es necesario especificar el token de administración "iceflixadmin". Una vez dentro, se mostrará el siguiente menú:

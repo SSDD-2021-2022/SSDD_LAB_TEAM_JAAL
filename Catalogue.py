@@ -6,7 +6,6 @@ import json
 import Ice
 Ice.loadSlice('iceflix.ice')
 import IceFlix
-#import metodos
 
 EXIT_ERROR=1
 
@@ -19,7 +18,6 @@ class MediaCatalogI(IceFlix.MediaCatalog):
     def getTile(self, mediaId, current=None):
         try:
             continuar = False
-            #PREGUNTAR
             tile=""
             media = IceFlix.Media()
             mediaInfo = IceFlix.MediaInfo()
@@ -57,26 +55,22 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
     def getTilesByTags(self, tags, allTags, userToken, current=None):
         try: 
-            user = self.auth_c.whois(userToken)
-            print(user)
-            if(user == ""):
-                raise IceFlix.Unauthorized
-        
             idAT = []
             id = []
             todasTags = 0
             data = json.loads(open('usuariosPeliculas.json').read())
+            
+            user = self.auth_c.whois(userToken)
+            print(user)
+            if(user == ""):
+                raise IceFlix.Unauthorized
 
             print(user)
-            #comprobacion de que el usuario esta en el json
             for usuario in data["users"]:
                 if (usuario["user"] == user):
-                    #sacamos las tags del usuario
                     tagsUsuario = usuario["tags"]
-                    #se itera el json, peliculas --> id, tagsPelicula--> los tags de ese id de pelicula
                     for peliculas, tagsPelicula in tagsUsuario.items():
-                    
-                        for meTag in tags: #meTag--> cada una de las tag que se meten al metodo
+                        for meTag in tags:
                             if(meTag in tagsPelicula):
                                 todasTags = todasTags+1
                                 if(allTags == False):
@@ -126,10 +120,9 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         except IceFlix.WrongMediaId:
             print("Id no valido\n")
         except IceFlix.Unauthorized:
-            print("Usuario no autorizado.")
+            print("Usuario no autorizado")
         
-
-        #preguntar lo de poner idmedia y lo de autorized
+        
     def removeTags(self, mediaId, tags, userToken, current=None):
         try:
             user = self.auth_c.whois(userToken)
@@ -157,7 +150,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             if(continuar==False):
                 raise IceFlix.WrongMediaId
         except IceFlix.Unauthorized:
-            print("usuario no autorizado")
+            print("Usuario no autorizado")
         except IceFlix.WrongMediaId:
             print("Id de la pelicula incorrecto")
 
@@ -191,15 +184,12 @@ class ClientCatalog(Ice.Application):
         proxy = self.communicator().stringToProxy(proxyMain)
         main_c = IceFlix.MainPrx.checkedCast(proxy)
         
-        auth_c = main_c.getAuthenticator() #modificacion, se ha puesto prx
-
-        #aux = MediaCatalogI(auth_c, main_c)
-        #Crear proxy de authenticator para registrarlo llamando a register-->del main
+        auth_c = main_c.getAuthenticator() 
+        
         broker = self.communicator()
         servant = MediaCatalogI(auth_c,main_c)
-        #print(servant.getTile("id1").info)
         adapter = broker.createObjectAdapter("MediaCatalogAdapter")
-        #time = datetime.datetime.now()
+        
         proxyCtg = adapter.add(servant, broker.stringToIdentity("mediacatalog1"))
         print(proxyCtg, flush=False)
         
@@ -209,7 +199,6 @@ class ClientCatalog(Ice.Application):
         main_c.register(pCtg)
         broker.waitForShutdown()
         return 0
-
 
 if __name__ == "__main__":
     ClientCatalog().main(sys.argv)

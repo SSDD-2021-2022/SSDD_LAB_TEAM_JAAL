@@ -7,15 +7,11 @@ import IceFlix
 import Authenticator
 import random
 
-
-
 id = 0
-
 
 class MainI(IceFlix.Main):
     listaObjAuth = []
     listaObjCtg = []
-
 
     def isAdmin(self, adminToken, current = None):
         admin = False
@@ -27,7 +23,6 @@ class MainI(IceFlix.Main):
 
     def register(self, service, current = None):
         try:
-            #Se comprueba el tipo de objeto remoto que llega
             print(service.ice_id())
             if(service.ice_isA("::IceFlix::Authenticator")):
                 self.listaObjAuth.append(service)
@@ -42,9 +37,6 @@ class MainI(IceFlix.Main):
 
     def getAuthenticator(self, current=None):
         
-            
-        #print(listaObjAuth[0].ice_ping())
-
         if(not self.listaObjAuth):
             raise IceFlix.TemporaryUnavailable
             
@@ -57,14 +49,10 @@ class MainI(IceFlix.Main):
             print("proxy inexistente")
             self.listaObjAuth.remove(proxyAuth) 
             raise IceFlix.TemporaryUnavailable
-            
-            
-
+         
         return IceFlix.AuthenticatorPrx.uncheckedCast(proxyAuth)
         
-            
-        
-    
+   
     def getCatalog(self, current=None):
 
         if(not self.listaObjCtg):
@@ -85,8 +73,8 @@ class ServerMain(Ice.Application):
     def run(self, args):
         broker = self.communicator()
         servant = MainI()
-        #servant.getAuthenticator()
         adapter = broker.createObjectAdapter("MainAdapter")
+        
         proxy = adapter.add(servant, broker.stringToIdentity("main1"))
 
         print(proxy, flush=True)
@@ -101,4 +89,3 @@ if __name__ == '__main__':
     exit_status = app.main(sys.argv)
     sys.exit(exit_status)
 
-#sys.exit(ServerMain().main(sys.argv))

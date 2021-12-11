@@ -20,11 +20,8 @@ class AuthenticatorI(IceFlix.Authenticator):
     def __init__(self, main_c):
         self.main_c = main_c
 
-    def refreshAuthorization(self,user, passwordHash, current=None): #Metodo para crear un nuevo token (recibe user y hash de la password)
+    def refreshAuthorization(self,user, passwordHash, current=None):
         try: 
-            #usuario = user
-            #passw = passwordHash
-
             token = ""
             data = json.loads(open('credenciales.json').read())
 
@@ -39,7 +36,6 @@ class AuthenticatorI(IceFlix.Authenticator):
                 raise IceFlix.Unauthorized
 
             if(token != ""):
-                #print(self.i)
                 self.dictTokens[self.i] = {"user":str(user), "token":str(token)}
                 self.i = self.i+1
 
@@ -128,19 +124,14 @@ class AuthenticatorI(IceFlix.Authenticator):
 class ClientAuthentication(Ice.Application):
 
     def run(self,argv):
-        
-        #obtencion del proxy, que se introduce por argumentos
         proxyMain = open("salida").read()
         proxy = self.communicator().stringToProxy(proxyMain)
         main_c = IceFlix.MainPrx.checkedCast(proxy)
-        #aux = AuthenticatorI(main_c)
-
-       
-       #Crear proxy de authenticator para registrarlo llamando a register-->del main
+        
         broker = self.communicator()
         servant = AuthenticatorI(main_c)
         adapter = broker.createObjectAdapter("AuthenticatorAdapter")
-        #time = datetime.datetime.now()
+        
         proxyAuth = adapter.add(servant, broker.stringToIdentity("authenticator1"))
         print(proxyAuth, flush=False)
         
@@ -150,24 +141,6 @@ class ClientAuthentication(Ice.Application):
         main_c.register(pAuth)
         broker.waitForShutdown()
         return 0
-
-       
-
-        """token = aux.refreshAuthorization(user1, "ssdd")
-        print("token "+str(token))
-
-        self.actualizarDictTokens(token, user1)
-        
-        print(dictTokens)
-
-        estaAutorizado = aux.isAuthorized(token)
-        print(estaAutorizado)
-
-        usuarioToken = aux.whois(token)
-        print("El token pertenece a "+str(usuarioToken))
-        aux.addUser("antonio","new password","blassss")
-        aux.removeUser("aneg","blassss")"""
-
 
 if __name__ == "__main__":
     ClientAuthentication().main(sys.argv)

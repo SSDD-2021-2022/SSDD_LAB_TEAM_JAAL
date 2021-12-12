@@ -21,6 +21,7 @@ following files and directories:
   Setuptools. It needs to be modified in order to adeccuate to the
   package name and console handler functions.
 
+**@Authors: José Antonio Oliver González-Ortega, Álvaro Pardo Benito, Antonio Patón Rico, Laura Toledo Gutiérrez.**
  # URL repo
 https://github.com/SSDD-2021-2022/SSDD_LAB_TEAM_JAAL
 

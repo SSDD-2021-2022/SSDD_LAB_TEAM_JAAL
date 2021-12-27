@@ -1,0 +1,15 @@
+#!/bin/bash
+echo "Ejecutando main..."
+./Main.py iceflixadmin --Ice.Config=Main_i.config > salida &
+sleep 1
+
+echo "Ejecutando authenticator..."
+./Authenticator.py --Ice.Config=Main_i.config & 
+sleep 1
+
+echo "Ejecutando Catálogo..."
+./Catalogue.py salida --Ice.Config=Main_i.config
+
+
+
+

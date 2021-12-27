@@ -120,6 +120,11 @@ class AuthenticatorI(IceFlix.Authenticator):
             print("Usuario no autorizado")
             #sys.exit(1)
 
+
+    def sendUsersDB(currentDB, srvId):
+        
+        print("")
+
 class ClientAuthentication(Ice.Application):
 
     def run(self,argv):

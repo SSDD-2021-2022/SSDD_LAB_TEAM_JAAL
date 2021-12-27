@@ -15,6 +15,7 @@ import IceFlix
 class AuthenticatorI(IceFlix.Authenticator):
     dictTokens = { 0:{"user": "", "token":""}}
     i = 0
+    
 
     def __init__(self, main_c):
         self.main_c = main_c

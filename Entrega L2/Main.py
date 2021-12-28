@@ -7,6 +7,7 @@ import IceFlix
 import Authenticator
 import random
 import threading
+import topics
 
 
 id = 0
@@ -72,6 +73,10 @@ class MainI(IceFlix.Main):
             
         return IceFlix.MediaCatalogPrx.uncheckedCast(proxyCtg)
 
+    def prueba(self):
+        print("mis pelotas")
+
+
 # metodo de check proxy para ver que proxy hay que eliminar. Como este metodo no usa self lo sacamos fuera de la clase
 def check_availability(proxies):
     '''Chech ping of all stored proxies'''
@@ -87,7 +92,7 @@ def check_availability(proxies):
         del proxies[proxyId]
 
 
-class ServiceAnnouncements(Ice.ServiceAnnouncements):
+class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
 
     def __init__(self):
         """Initialize the Discover object with empty services."""
@@ -144,18 +149,32 @@ class ServiceAnnouncements(Ice.ServiceAnnouncements):
 
 class ServerMain(Ice.Application):
     def run(self, args):
-        broker = self.communicator()
-        servant = MainI()
-        adapter = broker.createObjectAdapter("MainAdapter")
-        
-        proxy = adapter.add(servant, broker.stringToIdentity("main1"))
-
-        print(proxy, flush=True)
-
+        """Initialize the servants and put them to work."""
+        adapter = self.communicator().createObjectAdapterWithEndpoints('MainIceFlix', 'tcp')
         adapter.activate()
+
+        discover_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
+        discover_subscriber = ServiceAnnouncements()
+        discover_subscriber_proxy = adapter.addWithUUID(discover_subscriber)
+        discover_topic.subscribeAndGetPublisher({}, discover_subscriber_proxy)
+        #discover_subscriber.start()
+
+        service_implementation = MainI(discover_subscriber)
+        service_proxy = adapter.addWithUUID(service_implementation)
+        print(service_proxy, flush=True)
+
         self.shutdownOnInterrupt()
-        broker.waitForShutdown()
+        self.communicator().waitForShutdown()
+
+
+        discover_topic.unsubscribe(discover_subscriber_proxy)
+        discover_subscriber.stop()
+
         return 0
+
+
+
+
 
 if __name__ == '__main__':
     app=ServerMain()

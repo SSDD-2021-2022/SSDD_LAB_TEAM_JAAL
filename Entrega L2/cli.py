@@ -29,8 +29,8 @@ class Client(Ice.Application):
 		if not main_service:
 			print('Provided main_proxy is not a ::Service::Main() instance')
 			return EXIT_ERROR
-		printer = main_service.prueba()
-		print('Printer proxy: ' + printer)
+		printer = main_service.isAdmin("hola")
+		print('Printer proxy: ' + str(printer))
 		return EXIT_OK
 
 if __name__ == '__main__':

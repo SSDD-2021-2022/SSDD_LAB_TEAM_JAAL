@@ -125,6 +125,12 @@ class AuthenticatorI(IceFlix.Authenticator):
     def sendUsersDB(currentDB, srvId):
         
         print("")
+class UserUpdates(IceFlix.UserUpdates):
+    def __init__(self):
+        self.authenticators = {}
+    def newUser(self, user,passwordHash, srvId):
+        #he creado un nuevo usuario (evento)
+    def newToken(self, user, userToken, srvId):
 
 class ClientAuthentication(Ice.Application):
 
@@ -146,6 +152,8 @@ class ClientAuthentication(Ice.Application):
         main_c.register(pAuth)
         broker.waitForShutdown()
         return 0
+
+
 
 if __name__ == "__main__":
     ClientAuthentication().main(sys.argv)

@@ -16,6 +16,10 @@ class MainI(IceFlix.Main):
     listaObjAuth = []
     listaObjCtg = []
 
+    def __init__(self, discover_subscriber):
+        self._discover_subscriber_ = discover_subscriber
+        
+
     def isAdmin(self, adminToken, current = None):
         admin = False
 

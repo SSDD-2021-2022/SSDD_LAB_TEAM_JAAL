@@ -35,7 +35,7 @@
     interface StreamSync {
         // Emitted when StreamController() detects token/user revocation
         void requestAuthentication();
-    }
+    };
 
     // List of bytes
     sequence<byte> Bytes;
@@ -88,7 +88,9 @@
         string mediaId;
         string name;
         TagsPerUser tagsPerUser;
-    }
+    };
+
+    sequence<MediaDB> MediaDBList;
 
     ///////////// Catalog server /////////////
    
@@ -102,7 +104,7 @@
 
         void renameTile(string mediaId, string name, string adminToken) throws Unauthorized, WrongMediaId;
 
-        void sendCatalogDB(MediaDB catalogDatabase, string srvId) throws UnknownService;
+        void updateDB(MediaDBList catalogDatabase, string srvId) throws UnknownService;
     };
 
     // Emitted when any MediaCatalog() updates its data store
@@ -130,7 +132,7 @@
         void addUser(string user, string passwordHash, string adminToken) throws Unauthorized, TemporaryUnavailable;
         void removeUser(string user, string adminToken) throws Unauthorized, TemporaryUnavailable;
 
-        void sendUsersDB(UsersDB currentDatabase, string srvId) throws UnknownService; 
+        void updateDB(UsersDB currentDatabase, string srvId) throws UnknownService;
     };
 
     // Event channel for Authenticator() for notifications to other Authenticator()
@@ -150,10 +152,19 @@
     };
 
     ///////////// Main server /////////////
+    sequence<Authenticator*> AuthenticatorList;
+    sequence<MediaCatalog*> MediaCatalogList;
+
+    struct VolatileServices {
+        AuthenticatorList authenticators;
+        MediaCatalogList mediaCatalogs;
+    }
 
     interface Main {
         Authenticator* getAuthenticator() throws TemporaryUnavailable;
         MediaCatalog* getCatalog() throws TemporaryUnavailable;
+
+        void updateDB(VolatileServices currentServices, string srvId);
 
         bool isAdmin(string adminToken);
     };
@@ -166,5 +177,4 @@
         // Emmited when server starts to be available
         void announce(Object* service, string srvId);
     };
-
 };

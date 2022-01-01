@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
 import sys
+import uuid
 import Ice
 Ice.loadSlice('iceflix.ice')
 import IceFlix
-import Authenticator
+#import Authenticator
 import random
 import threading
 import topics
@@ -18,7 +19,12 @@ class MainI(IceFlix.Main):
 
     def __init__(self, discover_subscriber):
         self._discover_subscriber_ = discover_subscriber
+        self._id_ = str(uuid.uuid4())
         
+    @property
+    def service_id(self):
+        """Get instance ID."""
+        return self._id_
 
     def isAdmin(self, adminToken, current = None):
         admin = False
@@ -77,9 +83,6 @@ class MainI(IceFlix.Main):
             
         return IceFlix.MediaCatalogPrx.uncheckedCast(proxyCtg)
 
-    def prueba(self):
-        print("mis pelotas")
-
 
 # metodo de check proxy para ver que proxy hay que eliminar. Como este metodo no usa self lo sacamos fuera de la clase
 def check_availability(proxies):
@@ -100,29 +103,27 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
 
     def __init__(self):
         """Initialize the Discover object with empty services."""
+        self._id_ = str(uuid.uuid4())
         self.authenticators = {}
         self.catalogs = {}
 
         self.poll_timer = threading.Timer(5.0, self.remote_wrong_proxies) #no ponemos los parentesis a la funcion porque sino cogeria lo que retorna como valor
-
 
     @property
     def known_services(self):
         """Get serviceIds for all services."""
         return list(self.authenticators.keys()) + list(self.catalogs.keys())
 
-
     def newService(self, service, srvId, current=None):  # pylint: disable=unused-argument
+        """Check service type and add it."""
+        if srvId in self.known_services:
+            return
         if service.ice_isA('::IceFlix::Authenticator'):
-            if not self.authenticators:
-                return
-            else:
-                self.authenticators.items[0]
-                return
-
+            print(f'New Authenticator service: {srvId}')
+            self.authenticators[srvId] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
         elif service.ice_isA('::IceFlix::MediaCatalog'):
-            if not self.catalogs:
-                return
+            print(f'New MediaCatalog service: {srvId}')
+            self.catalogs[srvId] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
 
     def announce(self, service, srvId, current=None):  # pylint: disable=unused-argument
         """Check service type and add it."""
@@ -134,6 +135,9 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
         elif service.ice_isA('::IceFlix::MediaCatalog'):
             print(f'New MediaCatalog service: {srvId}')
             self.catalogs[srvId] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
+
+        elif service.ice_isA('::IceFlix::Main'):
+             print(f'New Main service: {srvId}')
 
     def remote_wrong_proxies(self):
         check_availability(self.authenticators)
@@ -154,25 +158,34 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
 class ServerMain(Ice.Application):
     def run(self, args):
         """Initialize the servants and put them to work."""
-        adapter = self.communicator().createObjectAdapterWithEndpoints('MainIceFlix', 'tcp')
+        adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
         adapter.activate()
-
-        discover_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
-        discover_subscriber = ServiceAnnouncements()
-        discover_subscriber_proxy = adapter.addWithUUID(discover_subscriber)
-        discover_topic.subscribeAndGetPublisher({}, discover_subscriber_proxy)
+        qos = {}
+        service_announcements_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
+        service_announcements_subscriber = ServiceAnnouncements()
+        service_announcements_subscriber_proxy = adapter.addWithUUID(service_announcements_subscriber)
+        service_announcements_topic.subscribeAndGetPublisher({}, service_announcements_subscriber_proxy)
         #discover_subscriber.start()
+        
+        
 
-        service_implementation = MainI(discover_subscriber)
+        service_implementation = MainI(service_announcements_subscriber)
         service_proxy = adapter.addWithUUID(service_implementation)
         print(service_proxy, flush=True)
 
+        main_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(service_announcements_topic.getPublisher())
+        main_publisher.announce(service_proxy,service_implementation.service_id)
+
+        file = open('listaAnunciamientos', "w")
+        file.write(str(qos)) 
+        file.close
+
         self.shutdownOnInterrupt()
         self.communicator().waitForShutdown()
+        
 
-
-        discover_topic.unsubscribe(discover_subscriber_proxy)
-        discover_subscriber.stop()
+        service_announcements_topic.unsubscribe(service_announcements_subscriber_proxy)
+        service_announcements_subscriber.stop()
 
         return 0
 

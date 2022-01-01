@@ -7,18 +7,24 @@ import uuid
 import json
 import random
 import datetime
+import topics
 import Ice
 Ice.loadSlice('iceflix.ice')
 import IceFlix
 
 
 class AuthenticatorI(IceFlix.Authenticator):
-    dictTokens = { 0:{"user": "", "token":""}}
-    i = 0
     
+    
+    UsersToken = {}
 
-    def __init__(self, main_c):
-        self.main_c = main_c
+    def __init__(self):
+        self._id_ = str(uuid.uuid4())
+        
+    @property
+    def service_id(self):
+        """Get instance ID."""
+        return self._id_
 
     def refreshAuthorization(self,user, passwordHash, current=None):
         try: 
@@ -36,10 +42,9 @@ class AuthenticatorI(IceFlix.Authenticator):
                 raise IceFlix.Unauthorized
 
             if(token != ""):
-                self.dictTokens[self.i] = {"user":str(user), "token":str(token)}
-                self.i = self.i+1
+                self.UsersToken[user] = token
 
-            print("diccionario "+str(self.dictTokens))
+            print("diccionario "+str(self.UsersToken))
 
             return token
 
@@ -125,33 +130,26 @@ class AuthenticatorI(IceFlix.Authenticator):
     def sendUsersDB(currentDB, srvId):
         
         print("")
-class UserUpdates(IceFlix.UserUpdates):
+class UserUpdatesI(IceFlix.UserUpdates):
     def __init__(self):
         self.authenticators = {}
     def newUser(self, user,passwordHash, srvId):
-        #he creado un nuevo usuario (evento)
+        print("hola")
     def newToken(self, user, userToken, srvId):
-
+        print("blas")
 class ClientAuthentication(Ice.Application):
 
     def run(self,argv):
-        proxyMain = open("salida").read()
-        proxy = self.communicator().stringToProxy(proxyMain)
-        main_c = IceFlix.MainPrx.checkedCast(proxy)
-        
-        broker = self.communicator()
-        servant = AuthenticatorI(main_c)
-        adapter = broker.createObjectAdapter("AuthenticatorAdapter")
-        
-        proxyAuth = adapter.add(servant, broker.stringToIdentity("authenticator1"))
-        print(proxyAuth, flush=False)
-        
+        aux = AuthenticatorI()
+        aux.refreshAuthorization("blas", "b94f9822bfc56656418c1e554f8edf1091444231c538d4d751b6339d87addc05")
+
+        adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
         adapter.activate()
-        self.shutdownOnInterrupt()
-        pAuth= IceFlix.AuthenticatorPrx.checkedCast(proxyAuth)
-        main_c.register(pAuth)
-        broker.waitForShutdown()
-        return 0
+    
+        user_updates_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'UserUpdates')
+        user_updates_subscriber = UserUpdatesI()
+        user_updates_subscriber_proxy = adapter.addWithUUID(user_updates_subscriber)
+        user_updates_topic.subscribeAndGetPublisher({}, user_updates_subscriber_proxy)
 
 
 

@@ -2,6 +2,7 @@
 
 from os import remove
 import sys
+import threading
 import time
 import uuid
 import json
@@ -18,7 +19,8 @@ class AuthenticatorI(IceFlix.Authenticator):
     
     UsersToken = {}
 
-    def __init__(self):
+    def __init__(self, user_updates_subscriber):
+        self._user_updates_subscriber_ = user_updates_subscriber
         self._id_ = str(uuid.uuid4())
         
     @property
@@ -130,28 +132,73 @@ class AuthenticatorI(IceFlix.Authenticator):
     def sendUsersDB(currentDB, srvId):
         
         print("")
-class UserUpdatesI(IceFlix.UserUpdates):
+        
+def check_availability(proxies):
+    '''Chech ping of all stored proxies'''
+    wrong_proxies = []
+    for proxyId in proxies:
+        try:
+            proxies[proxyId].ice_ping()
+        except Exception as error:
+            print(f'Proxy "{proxyId}" seems offline: {error}')
+            wrong_proxies.append(proxyId)
+
+    for proxyId in wrong_proxies:
+        del proxies[proxyId]
+class UserUpdates(IceFlix.UserUpdates):
     def __init__(self):
         self.authenticators = {}
+        self.poll_timer = threading.Timer(5.0, self.remote_wrong_proxies) #no ponemos los parentesis a la funcion porque sino cogeria lo que retorna como valor
     def newUser(self, user,passwordHash, srvId):
         print("hola")
     def newToken(self, user, userToken, srvId):
         print("blas")
+    
+    def remote_wrong_proxies(self):
+        check_availability(self.authenticators)
+        
+
+        self.poll_timer = threading.Timer(5.0, self.remote_wrong_proxies) #no ponemos los parentesis a la funcion porque sino cogeria lo que retorna como valor
+        self.poll_timer.start()
+
+    def start(self):
+        '''Start current timer'''
+        self.poll_timer.start() #podemos hacer una comprobacion de que ya esta arrancado o parado
+    def stop(self):
+        '''Cancel current timer'''
+        self.poll_timer.cancel()
+
 class ClientAuthentication(Ice.Application):
 
     def run(self,argv):
-        aux = AuthenticatorI()
-        aux.refreshAuthorization("blas", "b94f9822bfc56656418c1e554f8edf1091444231c538d4d751b6339d87addc05")
-
+        
         adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
         adapter.activate()
     
         user_updates_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'UserUpdates')
-        user_updates_subscriber = UserUpdatesI()
+        user_updates_subscriber = UserUpdates()
         user_updates_subscriber_proxy = adapter.addWithUUID(user_updates_subscriber)
         user_updates_topic.subscribeAndGetPublisher({}, user_updates_subscriber_proxy)
 
+        service_implementation = AuthenticatorI(user_updates_subscriber)
+        service_proxy = adapter.addWithUUID(service_implementation)
+        print(service_proxy, flush=True)
+
+        #parte publisher
+        discover_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
+        discover_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(discover_topic.getPublisher())
+        discover_publisher.newService(service_proxy,service_implementation.service_id)
+        self.shutdownOnInterrupt()
+        self.communicator().waitForShutdown()
+        
+
+        user_updates_topic.unsubscribe(user_updates_subscriber_proxy)
+        user_updates_subscriber.stop()
+
+        return 0
 
 
 if __name__ == "__main__":
-    ClientAuthentication().main(sys.argv)
+    app=ClientAuthentication()
+    exit_status = app.main(sys.argv)
+    sys.exit(exit_status)

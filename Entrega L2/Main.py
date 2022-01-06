@@ -17,9 +17,11 @@ class MainI(IceFlix.Main):
     listaObjAuth = []
     listaObjCtg = []
 
-    def __init__(self, discover_subscriber):
-        self._discover_subscriber_ = discover_subscriber
+    def __init__(self, service_announcements_subscriber):
+        self._discover_subscriber_ = service_announcements_subscriber
         self._id_ = str(uuid.uuid4())
+        self.authenticators = {}
+        self.catalogs = {} 
         
     @property
     def service_id(self):
@@ -97,11 +99,9 @@ def check_availability(proxies):
 
     for proxyId in wrong_proxies:
         del proxies[proxyId]
-
-
 class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
 
-    def __init__(self):
+    def __init__(self,current=None):
         """Initialize the Discover object with empty services."""
         self._id_ = str(uuid.uuid4())
         self.authenticators = {}
@@ -115,15 +115,17 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
         return list(self.authenticators.keys()) + list(self.catalogs.keys())
 
     def newService(self, service, srvId, current=None):  # pylint: disable=unused-argument
-        """Check service type and add it."""
         if srvId in self.known_services:
             return
+        
+        print(">>>>>>>>>>>>>>Hello, new service ")
         if service.ice_isA('::IceFlix::Authenticator'):
             print(f'New Authenticator service: {srvId}')
             self.authenticators[srvId] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
         elif service.ice_isA('::IceFlix::MediaCatalog'):
             print(f'New MediaCatalog service: {srvId}')
             self.catalogs[srvId] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
+        print(self.known_services)
 
     def announce(self, service, srvId, current=None):  # pylint: disable=unused-argument
         """Check service type and add it."""
@@ -138,6 +140,15 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
 
         elif service.ice_isA('::IceFlix::Main'):
              print(f'New Main service: {srvId}')
+        
+        
+
+    def lanzarAnnounce(self,publisher,service,srvId,current=None):
+        publisher.announce(service,srvId)
+        announce = threading.Timer(12.0,self.lanzarAnnounce,(publisher,service,srvId,))
+        announce.start()
+
+            
 
     def remote_wrong_proxies(self):
         check_availability(self.authenticators)
@@ -155,30 +166,44 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
         self.poll_timer.cancel()
 
 
+
 class ServerMain(Ice.Application):
+    
     def run(self, args):
+
+        def lanzarNuevoAnnounce():
+            service_announcements_publisher.announce(service_proxy,service_implementation.service_id)
+            
         """Initialize the servants and put them to work."""
-        adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
+        adapter = self.communicator().createObjectAdapterWithEndpoints('ServiceAnnouncements', 'tcp')
         adapter.activate()
         qos = {}
         service_announcements_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
         service_announcements_subscriber = ServiceAnnouncements()
         service_announcements_subscriber_proxy = adapter.addWithUUID(service_announcements_subscriber)
         service_announcements_topic.subscribeAndGetPublisher({}, service_announcements_subscriber_proxy)
-        #discover_subscriber.start()
+        service_announcements_subscriber.start()
         
-        
+        print("Waiting events...")
 
         service_implementation = MainI(service_announcements_subscriber)
         service_proxy = adapter.addWithUUID(service_implementation)
         print(service_proxy, flush=True)
 
-        main_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(service_announcements_topic.getPublisher())
-        main_publisher.announce(service_proxy,service_implementation.service_id)
+        service_announcements_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(service_announcements_topic.getPublisher())
+        
+        service_announcements_publisher.newService(service_proxy,service_implementation.service_id)
 
-        file = open('listaAnunciamientos', "w")
-        file.write(str(qos)) 
-        file.close
+        announce=threading.Timer(3.0,service_announcements_subscriber.lanzarAnnounce,(service_announcements_subscriber,service_proxy,service_implementation.service_id,))
+        announce.start()
+
+        #service_announcements_publisher.announce(service_proxy, service_implementation.service_id)
+        
+        #announce = threading.Timer(12.0,lanzarNuevoAnnounce(service_proxy,service_implementation.service_id))
+        #announce.start()
+
+        #announce = threading.Timer(12.0,service_announcements_subscriber.lanzarAnnounce,(service_announcements_subscriber,service_proxy,service_implementation.service_id,))
+        #announce.start()
 
         self.shutdownOnInterrupt()
         self.communicator().waitForShutdown()

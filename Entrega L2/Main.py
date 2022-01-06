@@ -21,7 +21,8 @@ class MainI(IceFlix.Main):
         self._discover_subscriber_ = service_announcements_subscriber
         self._id_ = str(uuid.uuid4())
         self.authenticators = {}
-        self.catalogs = {} 
+        self.catalogs = {}
+        self.mains = {} 
         
     @property
     def service_id(self):
@@ -106,30 +107,40 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
         self._id_ = str(uuid.uuid4())
         self.authenticators = {}
         self.catalogs = {}
+        self.mains = {}
 
         self.poll_timer = threading.Timer(5.0, self.remote_wrong_proxies) #no ponemos los parentesis a la funcion porque sino cogeria lo que retorna como valor
 
     @property
     def known_services(self):
         """Get serviceIds for all services."""
-        return list(self.authenticators.keys()) + list(self.catalogs.keys())
+        return list(self.authenticators.keys()) + list(self.catalogs.keys())+list(self.mains.keys())
 
     def newService(self, service, srvId, current=None):  # pylint: disable=unused-argument
-        if srvId in self.known_services:
-            return
-        
-        print(">>>>>>>>>>>>>>Hello, new service ")
-        if service.ice_isA('::IceFlix::Authenticator'):
-            print(f'New Authenticator service: {srvId}')
-            self.authenticators[srvId] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
-        elif service.ice_isA('::IceFlix::MediaCatalog'):
-            print(f'New MediaCatalog service: {srvId}')
-            self.catalogs[srvId] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
-        print(self.known_services)
+        if srvId != self._id_:
+            print(self._id_)
+            print(srvId+"Hay que actualizar la base de datos de "+srvId)
+            if srvId in self.known_services:
+                return
+            print(">>>>>>>>>>>>>>Hello, new service type")
+            if service.ice_isA('::IceFlix::Authenticator'):
+                print(f'New Authenticator service: {srvId}')
+                self.authenticators[srvId] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
+            elif service.ice_isA('::IceFlix::MediaCatalog'):
+                print(f'New MediaCatalog service: {srvId}')
+                self.catalogs[srvId] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
+            elif service.ice_isA('::IceFlix::Main'):
+                print(f'New Main service: {srvId}')
+                self.mains[srvId] = IceFlix.MainPrx.uncheckedCast(service)
+                #mandar solicitud de actualizar base de datos
+            print(self.mains.keys())
 
     def announce(self, service, srvId, current=None):  # pylint: disable=unused-argument
         """Check service type and add it."""
         if srvId in self.known_services:
+            print(f'Servicio {srvId} anunciandose')
+            print("Servicio ya conocido")
+            print(self.known_services)
             return
         if service.ice_isA('::IceFlix::Authenticator'):
             print(f'New Authenticator service: {srvId}')
@@ -140,6 +151,9 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
 
         elif service.ice_isA('::IceFlix::Main'):
              print(f'New Main service: {srvId}')
+             self.mains[srvId] = IceFlix.MainPrx.uncheckedCast(service)
+             #actualiza base de datos
+        print(self.known_services)
         
         
 
@@ -153,6 +167,7 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
     def remote_wrong_proxies(self):
         check_availability(self.authenticators)
         check_availability(self.catalogs)
+        check_availability(self.mains)
 
         self.poll_timer = threading.Timer(5.0, self.remote_wrong_proxies) #no ponemos los parentesis a la funcion porque sino cogeria lo que retorna como valor
         self.poll_timer.start()
@@ -173,9 +188,11 @@ class ServerMain(Ice.Application):
 
         def lanzarNuevoAnnounce():
             service_announcements_publisher.announce(service_proxy,service_implementation.service_id)
+            announce = threading.Timer(12.0,lanzarNuevoAnnounce)
+            announce.start()
             
         """Initialize the servants and put them to work."""
-        adapter = self.communicator().createObjectAdapterWithEndpoints('ServiceAnnouncements', 'tcp')
+        adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
         adapter.activate()
         qos = {}
         service_announcements_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
@@ -194,7 +211,8 @@ class ServerMain(Ice.Application):
         
         service_announcements_publisher.newService(service_proxy,service_implementation.service_id)
 
-        announce=threading.Timer(3.0,service_announcements_subscriber.lanzarAnnounce,(service_announcements_subscriber,service_proxy,service_implementation.service_id,))
+        #announce=threading.Timer(3.0,service_announcements_subscriber.lanzarAnnounce,(service_announcements_subscriber,service_proxy,service_implementation.service_id,))
+        announce = threading.Timer(3.0,lanzarNuevoAnnounce)
         announce.start()
 
         #service_announcements_publisher.announce(service_proxy, service_implementation.service_id)

@@ -17,7 +17,7 @@ import IceFlix
 class AuthenticatorI(IceFlix.Authenticator):
     
     
-    UsersToken = {}
+    UsersDB = IceFlix.UsersDB()
 
     def __init__(self, user_updates_subscriber):
         self._user_updates_subscriber_ = user_updates_subscriber
@@ -44,9 +44,9 @@ class AuthenticatorI(IceFlix.Authenticator):
                 raise IceFlix.Unauthorized
 
             if(token != ""):
-                self.UsersToken[user] = token
+                self.UsersDB.UsersToken[user] = token
 
-            print("diccionario "+str(self.UsersToken))
+            print("diccionario "+str(self.UsersDB.UsersToken))
 
             return token
 
@@ -58,8 +58,8 @@ class AuthenticatorI(IceFlix.Authenticator):
     def isAuthorized(self, userToken, current = None):
         isAuth = False
         
-        for element in self.dictTokens:
-            if userToken == self.dictTokens[element]["token"]:
+        for element in self.UsersDB.UsersToken:
+            if userToken == self.UsersDB.UsersToken[element]:
                 isAuth = True
 
 
@@ -68,8 +68,8 @@ class AuthenticatorI(IceFlix.Authenticator):
     def whois(self, userToken, current = None):
         user = ""
         try:
-            for element in self.dictTokens:
-                if userToken == self.dictTokens[element]["token"]:
+            for element in self.UsersDB.UsersToken:
+                if userToken == self.UsersDB.UsersToken[element]["token"]:
                     user = self.dictTokens[element]["user"]
             
             if (user == ""):
@@ -128,8 +128,9 @@ class AuthenticatorI(IceFlix.Authenticator):
             print("Usuario no autorizado")
             #sys.exit(1)
 
+    #void updateDB(UsersDB currentDatabase, string srvId) throws UnknownService;
 
-    def sendUsersDB(currentDB, srvId):
+    def updateDB(currentDatabase, srvId):
         
         print("")
         
@@ -172,6 +173,8 @@ class ClientAuthentication(Ice.Application):
 
     def run(self,argv):
         
+
+        ##____________________CANAL USER_UPDATES______________##
         adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
         adapter.activate()
     
@@ -179,15 +182,42 @@ class ClientAuthentication(Ice.Application):
         user_updates_subscriber = UserUpdates()
         user_updates_subscriber_proxy = adapter.addWithUUID(user_updates_subscriber)
         user_updates_topic.subscribeAndGetPublisher({}, user_updates_subscriber_proxy)
+        user_updates_subscriber.start()
+
+
 
         service_implementation = AuthenticatorI(user_updates_subscriber)
         service_proxy = adapter.addWithUUID(service_implementation)
         print(service_proxy, flush=True)
 
+        user_updates_publisher = IceFlix.UserUpdatesPrx.uncheckedCast(user_updates_topic.getPublisher())
+
+        ##____________________CANAL SERVICE_ANNOUNCEMENTS______________##
+        # adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
+        # adapter.activate()
+        # qos = {}
+        # service_announcements_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
+        # service_announcements_subscriber = ServiceAnnouncements()
+        # service_announcements_subscriber_proxy = adapter.addWithUUID(service_announcements_subscriber)
+        # service_announcements_topic.subscribeAndGetPublisher({}, service_announcements_subscriber_proxy)
+        # service_announcements_subscriber.start()
+        
+        # print("Waiting events...")
+
+        # service_implementation = MainI(service_announcements_subscriber)
+        # service_proxy = adapter.addWithUUID(service_implementation)
+        # print(service_proxy, flush=True)
+
         #parte publisher
         discover_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
         discover_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(discover_topic.getPublisher())
         discover_publisher.newService(service_proxy,service_implementation.service_id)
+
+
+
+        ##____________________CANAL REVOCATIONS______________##
+
+
         self.shutdownOnInterrupt()
         self.communicator().waitForShutdown()
         

@@ -128,11 +128,12 @@ class AuthenticatorI(IceFlix.Authenticator):
             print("Usuario no autorizado")
             #sys.exit(1)
 
-    #void updateDB(UsersDB currentDatabase, string srvId) throws UnknownService;
-
     def updateDB(currentDatabase, srvId):
         
         print("")
+    
+    def miTula():
+        print("tu madre trabaja en Colombia")
         
 def check_availability(proxies):
     '''Chech ping of all stored proxies'''
@@ -209,9 +210,21 @@ class ClientAuthentication(Ice.Application):
         # print(service_proxy, flush=True)
 
         #parte publisher
+
+        def lanzarNuevoAnnounce():
+            discover_publisher.announce(service_proxy,service_implementation.service_id)
+            announce = threading.Timer(10.0,lanzarNuevoAnnounce)
+            announce.start()
+            print("Authenticator anunciandose")
+
         discover_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
         discover_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(discover_topic.getPublisher())
         discover_publisher.newService(service_proxy,service_implementation.service_id)
+
+        #discover_publisher.announce(service_proxy,service_implementation.service_id)
+
+        announce = threading.Timer(10.0,lanzarNuevoAnnounce)
+        announce.start()
 
 
 

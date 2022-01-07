@@ -105,8 +105,8 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
 
     def __init__(self,current=None):
         """Initialize the Discover object with empty services."""
-        # self.jose = IceFlix.VolatileServices()
-        # aututhenticators = self.jose.AuthenticatorList()
+        self.jose = IceFlix.VolatileServices()
+        #aututhenticators = self.jose.AuthenticatorList()
         self._id_ = str(uuid.uuid4())
         self.authenticators = {}
         self.catalogs = {}
@@ -128,10 +128,19 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
             print(">>>>>>>>>>>>>>Hello, new service type")
             if service.ice_isA('::IceFlix::Authenticator'):
                 print(f'New Authenticator service: {srvId}')
-                # if not self.authenticators:
-                #     auth = IceFlix.AuthenticatorPrx.uncheckedCast(self.authenticators.values[0])
-                #     auth.sendUserDB()
-                #     print("")
+                if not self.authenticators:
+                    print("Soy el primer Authenticator")
+                    print(self.jose.authenticators)
+                    #self.jose.authenticators[0] = "tu madre"
+                    #print(str(self.jose.authenticators[0]))
+                    print(type(self.jose))
+
+
+                else:
+                    auth = IceFlix.AuthenticatorPrx.checkedCast(service)
+                    misco = auth.isAuthorized("miTula")
+                    print("----------------"+str(misco)+"------------")
+                    
                 self.authenticators[srvId] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
             elif service.ice_isA('::IceFlix::MediaCatalog'):
                 print(f'New MediaCatalog service: {srvId}')

@@ -131,9 +131,6 @@ class AuthenticatorI(IceFlix.Authenticator):
     def updateDB(currentDatabase, srvId):
         
         print("")
-    
-    def miTula():
-        print("tu madre trabaja en Colombia")
         
 def check_availability(proxies):
     '''Chech ping of all stored proxies'''

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from _typeshed import Self
 from os import remove
 import sys
 import threading
@@ -17,11 +18,17 @@ import IceFlix
 class AuthenticatorI(IceFlix.Authenticator):
     
     
-    UsersDB = IceFlix.UsersDB()
-
     def __init__(self, user_updates_subscriber):
         self._user_updates_subscriber_ = user_updates_subscriber
         self._id_ = str(uuid.uuid4())
+        
+        UsersPasswords = {}
+        UsersToken = {}
+
+        self.UsersDB = IceFlix.UsersDB()
+        self.UsersDB.userPasswords = UsersPasswords
+        self.UsersDB.usersToken = UsersToken
+
         
     @property
     def service_id(self):
@@ -128,9 +135,9 @@ class AuthenticatorI(IceFlix.Authenticator):
             print("Usuario no autorizado")
             #sys.exit(1)
 
-    def updateDB(currentDatabase, srvId):
+    def updateDB(self, currentDatabase, srvId):
+        self.UsersDB = currentDatabase
         
-        print("")
         
 def check_availability(proxies):
     '''Chech ping of all stored proxies'''

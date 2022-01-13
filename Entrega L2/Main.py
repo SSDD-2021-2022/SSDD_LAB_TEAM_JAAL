@@ -15,15 +15,23 @@ import topics
 id = 0
 
 class MainI(IceFlix.Main):
-    listaObjAuth = []
-    listaObjCtg = []
+    # listaObjAuth = []
+    # listaObjCtg = []
 
     def __init__(self, service_announcements_subscriber):
         self._discover_subscriber_ = service_announcements_subscriber
         self._id_ = str(uuid.uuid4())
-        self.authenticators = {}
-        self.catalogs = {}
-        self.mains = {} 
+        # self.authenticators = {}
+        # self.catalogs = {}
+        # self.mains = {} 
+        self.VolatileServices = IceFlix.VolatileServices()
+        
+        authenticatorList = []
+        mediaCatalogsList = []
+
+        self.VolatileServices.authenticators = authenticatorList
+        self.VolatileServices.mediaCatalogs = mediaCatalogsList
+
         
     @property
     def service_id(self):
@@ -138,8 +146,8 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
 
                 else:
                     auth = IceFlix.AuthenticatorPrx.checkedCast(service)
-                    misco = auth.isAuthorized("miTula")
-                    print("----------------"+str(misco)+"------------")
+                    print("----------------HOLA------------")
+                    auth.updateDB()
                     
                 self.authenticators[srvId] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
             elif service.ice_isA('::IceFlix::MediaCatalog'):
@@ -206,11 +214,10 @@ class ServerMain(Ice.Application):
     def run(self, args):
 
         def lanzarNuevoAnnounce():
-            print("tupac")
             service_announcements_publisher.announce(service_proxy,service_implementation.service_id)
             announce = threading.Timer(12.0,lanzarNuevoAnnounce)
             announce.start()
-            print("misco")
+            
             
             
         """Initialize the servants and put them to work."""

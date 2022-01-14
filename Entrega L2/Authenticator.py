@@ -14,10 +14,11 @@ import Ice
 Ice.loadSlice('iceflix.ice')
 import IceFlix
 
+from Main import ServiceAnnouncements
+
 
 class AuthenticatorI(IceFlix.Authenticator):
-    
-    
+
     def __init__(self, user_updates_subscriber):
         self._user_updates_subscriber_ = user_updates_subscriber
         self._id_ = str(uuid.uuid4())
@@ -29,7 +30,6 @@ class AuthenticatorI(IceFlix.Authenticator):
         self.UsersDB.userPasswords = UsersPasswords
         self.UsersDB.usersToken = UsersToken
 
-        
     @property
     def service_id(self):
         """Get instance ID."""
@@ -60,16 +60,13 @@ class AuthenticatorI(IceFlix.Authenticator):
         except IceFlix.Unauthorized:
             print("Usuario no autorizado")
             
-            
-            
     def isAuthorized(self, userToken, current = None):
         isAuth = False
         
         for element in self.UsersDB.UsersToken:
             if userToken == self.UsersDB.UsersToken[element]:
                 isAuth = True
-
-
+                
         return isAuth
 
     def whois(self, userToken, current = None):
@@ -151,19 +148,22 @@ def check_availability(proxies):
 
     for proxyId in wrong_proxies:
         del proxies[proxyId]
+        
 class UserUpdates(IceFlix.UserUpdates):
+    
     def __init__(self):
         self.authenticators = {}
         self.poll_timer = threading.Timer(5.0, self.remote_wrong_proxies) #no ponemos los parentesis a la funcion porque sino cogeria lo que retorna como valor
+    
     def newUser(self, user,passwordHash, srvId):
         print("hola")
+        
     def newToken(self, user, userToken, srvId):
         print("blas")
     
     def remote_wrong_proxies(self):
         check_availability(self.authenticators)
         
-
         self.poll_timer = threading.Timer(5.0, self.remote_wrong_proxies) #no ponemos los parentesis a la funcion porque sino cogeria lo que retorna como valor
         self.poll_timer.start()
 
@@ -177,27 +177,26 @@ class UserUpdates(IceFlix.UserUpdates):
 class ClientAuthentication(Ice.Application):
 
     def run(self,argv):
+
+        print("GOLA")
         
-
-        ##____________________CANAL USER_UPDATES______________##
-        adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
-        adapter.activate()
+        # ##____________________CANAL USER_UPDATES______________##
+        # adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
+        # adapter.activate()
     
-        user_updates_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'UserUpdates')
-        user_updates_subscriber = UserUpdates()
-        user_updates_subscriber_proxy = adapter.addWithUUID(user_updates_subscriber)
-        user_updates_topic.subscribeAndGetPublisher({}, user_updates_subscriber_proxy)
-        user_updates_subscriber.start()
+        # user_updates_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'UserUpdates')
+        # user_updates_subscriber = UserUpdates()
+        # user_updates_subscriber_proxy = adapter.addWithUUID(user_updates_subscriber)
+        # user_updates_topic.subscribeAndGetPublisher({}, user_updates_subscriber_proxy)
+        # user_updates_subscriber.start()
 
+        # service_implementation = AuthenticatorI(user_updates_subscriber)
+        # service_proxy = adapter.addWithUUID(service_implementation)
+        # print(service_proxy, flush=True)
 
+        # user_updates_publisher = IceFlix.UserUpdatesPrx.uncheckedCast(user_updates_topic.getPublisher())
 
-        service_implementation = AuthenticatorI(user_updates_subscriber)
-        service_proxy = adapter.addWithUUID(service_implementation)
-        print(service_proxy, flush=True)
-
-        user_updates_publisher = IceFlix.UserUpdatesPrx.uncheckedCast(user_updates_topic.getPublisher())
-
-        ##____________________CANAL SERVICE_ANNOUNCEMENTS______________##
+        # ##____________________CANAL SERVICE_ANNOUNCEMENTS______________##
         # adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
         # adapter.activate()
         # qos = {}
@@ -209,43 +208,43 @@ class ClientAuthentication(Ice.Application):
         
         # print("Waiting events...")
 
-        # service_implementation = MainI(service_announcements_subscriber)
+        # service_implementation = AuthenticatorI(service_announcements_subscriber)
         # service_proxy = adapter.addWithUUID(service_implementation)
         # print(service_proxy, flush=True)
 
-        #parte publisher
+        # #parte publisher
 
-        def lanzarNuevoAnnounce():
-            discover_publisher.announce(service_proxy,service_implementation.service_id)
-            announce = threading.Timer(10.0,lanzarNuevoAnnounce)
-            announce.start()
-            print("Authenticator anunciandose")
+        # def lanzarNuevoAnnounce():
+        #     discover_publisher.announce(service_proxy,service_implementation.service_id)
+        #     announce = threading.Timer(10.0,lanzarNuevoAnnounce)
+        #     announce.start()
+        #     print("Authenticator anunciandose")
 
-        discover_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
-        discover_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(discover_topic.getPublisher())
-        discover_publisher.newService(service_proxy,service_implementation.service_id)
+        # discover_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
+        # discover_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(discover_topic.getPublisher())
+        # discover_publisher.newService(service_proxy,service_implementation.service_id)
 
-        #discover_publisher.announce(service_proxy,service_implementation.service_id)
+        # #discover_publisher.announce(service_proxy,service_implementation.service_id)
 
-        announce = threading.Timer(10.0,lanzarNuevoAnnounce)
-        announce.start()
-
-
-
-        ##____________________CANAL REVOCATIONS______________##
+        # announce = threading.Timer(10.0,lanzarNuevoAnnounce)
+        # announce.start()
 
 
-        self.shutdownOnInterrupt()
-        self.communicator().waitForShutdown()
+
+        # ##____________________CANAL REVOCATIONS______________##
+
+
+        # self.shutdownOnInterrupt()
+        # self.communicator().waitForShutdown()
         
 
-        user_updates_topic.unsubscribe(user_updates_subscriber_proxy)
-        user_updates_subscriber.stop()
+        # user_updates_topic.unsubscribe(user_updates_subscriber_proxy)
+        # user_updates_subscriber.stop()
 
-        return 0
+        # return 0
 
 
 if __name__ == "__main__":
-    app=ClientAuthentication()
+    app = ClientAuthentication()
     exit_status = app.main(sys.argv)
     sys.exit(exit_status)

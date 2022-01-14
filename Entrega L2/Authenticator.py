@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from _typeshed import Self
+#from _typeshed import Self
 from os import remove
 import sys
 import threading
@@ -46,7 +46,8 @@ class AuthenticatorI(IceFlix.Authenticator):
                 
                 if  (userJSON == user and passHashJSON == passwordHash):
                     token = uuid.uuid4().hex
-            
+            ####AÑADIR AL DIC LA CONTRASEÑA DEL USUARIO####
+
             if (token == ""):
                 raise IceFlix.Unauthorized
 
@@ -62,19 +63,27 @@ class AuthenticatorI(IceFlix.Authenticator):
             
     def isAuthorized(self, userToken, current = None):
         isAuth = False
+
+        if userToken in self.UsersDB.usersToken.values():
+            isAuth = True
         
-        for element in self.UsersDB.UsersToken:
-            if userToken == self.UsersDB.UsersToken[element]:
-                isAuth = True
+        # for element in self.UsersDB.UsersToken:
+        #     if userToken == self.UsersDB.UsersToken[element]:
+        #         isAuth = True
                 
         return isAuth
 
     def whois(self, userToken, current = None):
         user = ""
         try:
-            for element in self.UsersDB.UsersToken:
-                if userToken == self.UsersDB.UsersToken[element]["token"]:
-                    user = self.dictTokens[element]["user"]
+            for key, value in self.UsersDB.UsersToken.items():
+                if userToken == value:
+                    user = key
+
+
+            # for element in self.UsersDB.UsersToken:
+            #     if userToken == self.UsersDB.UsersToken[element]["token"]:
+            #         user = self.dictTokens[element]["user"]
             
             if (user == ""):
                 raise IceFlix.Unauthorized
@@ -180,21 +189,21 @@ class ClientAuthentication(Ice.Application):
 
         print("GOLA")
         
-        # ##____________________CANAL USER_UPDATES______________##
-        # adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
-        # adapter.activate()
+        ##____________________CANAL USER_UPDATES______________##
+        adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
+        adapter.activate()
     
-        # user_updates_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'UserUpdates')
-        # user_updates_subscriber = UserUpdates()
-        # user_updates_subscriber_proxy = adapter.addWithUUID(user_updates_subscriber)
-        # user_updates_topic.subscribeAndGetPublisher({}, user_updates_subscriber_proxy)
-        # user_updates_subscriber.start()
+        user_updates_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'UserUpdates')
+        user_updates_subscriber = UserUpdates()
+        user_updates_subscriber_proxy = adapter.addWithUUID(user_updates_subscriber)
+        user_updates_topic.subscribeAndGetPublisher({}, user_updates_subscriber_proxy)
+        user_updates_subscriber.start()
 
-        # service_implementation = AuthenticatorI(user_updates_subscriber)
-        # service_proxy = adapter.addWithUUID(service_implementation)
-        # print(service_proxy, flush=True)
+        service_implementation = AuthenticatorI(user_updates_subscriber)
+        service_proxy = adapter.addWithUUID(service_implementation)
+        print(service_proxy, flush=True)
 
-        # user_updates_publisher = IceFlix.UserUpdatesPrx.uncheckedCast(user_updates_topic.getPublisher())
+        user_updates_publisher = IceFlix.UserUpdatesPrx.uncheckedCast(user_updates_topic.getPublisher())
 
         # ##____________________CANAL SERVICE_ANNOUNCEMENTS______________##
         # adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
@@ -220,9 +229,9 @@ class ClientAuthentication(Ice.Application):
         #     announce.start()
         #     print("Authenticator anunciandose")
 
-        # discover_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
-        # discover_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(discover_topic.getPublisher())
-        # discover_publisher.newService(service_proxy,service_implementation.service_id)
+        discover_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
+        discover_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(discover_topic.getPublisher())
+        discover_publisher.newService(service_proxy,service_implementation.service_id)
 
         # #discover_publisher.announce(service_proxy,service_implementation.service_id)
 
@@ -234,14 +243,14 @@ class ClientAuthentication(Ice.Application):
         # ##____________________CANAL REVOCATIONS______________##
 
 
-        # self.shutdownOnInterrupt()
-        # self.communicator().waitForShutdown()
+        self.shutdownOnInterrupt()
+        self.communicator().waitForShutdown()
         
 
-        # user_updates_topic.unsubscribe(user_updates_subscriber_proxy)
-        # user_updates_subscriber.stop()
+        user_updates_topic.unsubscribe(user_updates_subscriber_proxy)
+        user_updates_subscriber.stop()
 
-        # return 0
+        return 0
 
 
 if __name__ == "__main__":

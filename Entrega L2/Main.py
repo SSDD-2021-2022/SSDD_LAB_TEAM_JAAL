@@ -137,7 +137,7 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
 
     def __init__(self, service_type, service_instance, service_proxy, current=None):
         """Initialize the Discover object with empty services."""
-        self.volatile_services = IceFlix.VolatileServices()
+        # self.volatile_services = IceFlix.VolatileServices()
         #aututhenticators = self.volatile_services.AuthenticatorList()
         self._id_ = str(uuid.uuid4())
         self._service_type = service_type
@@ -160,15 +160,18 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
         
         if service.ice_isA('::IceFlix::Main'):
             print(f'New possible MainService: {srvId}')
+            self.mains[srvId] = IceFlix.MainPrx.uncheckedCast(service)
             # Comprobar token administracion
             srv_prx = IceFlix.MainPrx.checkedCast(service)
         
         elif service.ice_isA('::IceFlix::Authenticator'):
             print(f'New possible AuthenticatorService: {srvId}')
+            self.authenticators[srvId] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
             srv_prx = IceFlix.AuthenticatorPrx.checkedCast(service)
             
         elif service.ice_isA('::IceFlix::MediaCatalog'):
             print(f'New possible MediaCatalogService: {srvId}')
+            self.catalogs[srvId] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
             srv_prx = IceFlix.MediaCatalogPrx.checkedCast(service)
         
         self._service_instance.sendDB(srv_prx)

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
+from multiprocessing.connection import wait
 from sqlite3 import adapt
 import sys
+from time import process_time_ns, sleep
 import uuid
 import Ice
 Ice.loadSlice('iceflix.ice')
@@ -25,10 +27,12 @@ class MainI(IceFlix.Main):
         
         authenticatorList = []
         mediaCatalogsList = []
-
+        
         self.VolatileServices.authenticators = authenticatorList
         self.VolatileServices.mediaCatalogs = mediaCatalogsList
         
+        self._updated = False
+    
 
         
     @property
@@ -99,10 +103,17 @@ class MainI(IceFlix.Main):
     def sendDB(self, srv_proxy):
         currentDB = self.getDB()
         srvId = self.service_id
+        print("Enviando BD...")
         srv_proxy.updateDB(currentDB, srvId)
         
-    def updateDB(self, currentDB, srvId):
-        print("Base de datos actualizada: ")
+    def updateDB(self, currentDB, srvId, current = None):
+        if self._updated == True:
+            return
+        print("Base de datos actualizada desde: " + str(srvId))
+        self._updated = True
+        
+    def returnUpdated(self):
+        return self._updated
         
         
 
@@ -159,14 +170,10 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
         elif service.ice_isA('::IceFlix::MediaCatalog'):
             print(f'New possible MediaCatalogService: {srvId}')
             srv_prx = IceFlix.MediaCatalogPrx.checkedCast(service)
-            
+        
         self._service_instance.sendDB(srv_prx)
-            
         
         
-        
-        
-
     def announce(self, service, srvId, current=None):  # pylint: disable=unused-argument
         """Check service type and add it."""
         if srvId in self.known_services:
@@ -183,7 +190,7 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
             self.catalogs[srvId] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
 
         elif service.ice_isA('::IceFlix::Main'):
-             print(f'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa---New Main service: {srvId}')
+             print(f'New Main service: {srvId}')
              self.mains[srvId] = IceFlix.MainPrx.uncheckedCast(service)
              #actualiza base de datos
         print(self.known_services)
@@ -228,6 +235,7 @@ class ServerMain(Ice.Application):
         service_implementation = MainI(service_announce_subscriber)
         service_proxy = adapter.addWithUUID(service_implementation)
         print(service_proxy, flush=True)
+        print(service_implementation.service_id)
         
         service_announce_subscriber._service_type = service_proxy.ice_id()
         service_announce_subscriber._service_instance = service_implementation
@@ -237,6 +245,7 @@ class ServerMain(Ice.Application):
                 
         service_announce_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(service_announce_topic.getPublisher())
         service_announce_publisher.newService(service_proxy, service_implementation.service_id)
+        #service_announce_publisher.announce(service_proxy, service_implementation.service_id)
     
         
         self.shutdownOnInterrupt()

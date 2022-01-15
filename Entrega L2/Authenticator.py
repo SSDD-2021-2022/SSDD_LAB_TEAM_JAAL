@@ -19,9 +19,14 @@ from Main import ServiceAnnouncements
 
 class AuthenticatorI(IceFlix.Authenticator):
 
-    def __init__(self, user_updates_subscriber):
-        self._user_updates_subscriber_ = user_updates_subscriber
+    def __init__(self, service_announcements_subscriber, prx_service, srv_announce_pub):
+        #self._user_updates_subscriber_ = user_updates_subscriber
         self._id_ = str(uuid.uuid4())
+        self._service_announcements_subscriber = service_announcements_subscriber
+        self._prx_service = prx_service
+        self._srv_announce_pub = srv_announce_pub
+        self._updated = False
+        self.announcements = None
         
         UsersPasswords = {}
         UsersToken = {}
@@ -46,15 +51,14 @@ class AuthenticatorI(IceFlix.Authenticator):
                 
                 if  (userJSON == user and passHashJSON == passwordHash):
                     token = uuid.uuid4().hex
-            ####AÑADIR AL DIC LA CONTRASEÑA DEL USUARIO####
 
             if (token == ""):
                 raise IceFlix.Unauthorized
 
             if(token != ""):
-                self.UsersDB.UsersToken[user] = token
+                self.UsersDB.usersToken[user] = token
 
-            print("diccionario "+str(self.UsersDB.UsersToken))
+            print("diccionario "+str(self.UsersDB.usersToken))
 
             return token
 
@@ -66,17 +70,14 @@ class AuthenticatorI(IceFlix.Authenticator):
 
         if userToken in self.UsersDB.usersToken.values():
             isAuth = True
-        
-        # for element in self.UsersDB.UsersToken:
-        #     if userToken == self.UsersDB.UsersToken[element]:
-        #         isAuth = True
+
                 
         return isAuth
 
     def whois(self, userToken, current = None):
         user = ""
         try:
-            for key, value in self.UsersDB.UsersToken.items():
+            for key, value in self.UsersDB.usersToken.items():
                 if userToken == value:
                     user = key
 
@@ -141,8 +142,49 @@ class AuthenticatorI(IceFlix.Authenticator):
             print("Usuario no autorizado")
             #sys.exit(1)
 
-    def updateDB(self, currentDatabase, srvId):
-        self.UsersDB = currentDatabase
+    def initService(self):
+        print("Inicio de servicios")
+        self._srv_announce_pub.newService(self._prx_service,self.service_id)
+        self.announcements = threading.Timer(3.0, self.serviceAnnouncing)
+        self.announcements.start()
+
+    def updateDBjson(self):
+        data = json.loads(open('credenciales.json').read())
+
+        for usuario in data['users']:
+            userJSON = usuario['user']
+            passHashJSON = usuario["passwordHash"]
+            self.UsersDB.userPasswords[userJSON] = passHashJSON
+
+    def serviceAnnouncing(self):
+        if not self._updated:
+            print("Base de Datos actualizada del json")
+            self.updateDBjson()
+            self._updated = True
+
+        self._srv_announce_pub.announce(self._prx_service,self.service_id)
+        time = 10 + random.uniform(-2,2)
+        self.announcements = threading.Timer(time,self.serviceAnnouncing)
+        self.announcements.start()
+    
+    def getDB(self):
+        return self.UsersDB
+    
+    def sendDB(self, srv_proxy):
+        currentDB = self.getDB()
+        srvId = self.service_id
+        print("Enviando BD...")
+        srv_proxy.updateDB(currentDB, srvId)
+
+    def updateDB(self, currentDB, srvId, current = None):
+        if self._updated == True:
+            return
+        self.UsersDB = currentDB
+        print("Base de datos actualizada desde: " + str(srvId))
+        self._updated = True
+        self._srv_announce_pub.announce(self._prx_service,self.service_id)
+
+
         
         
 def check_availability(proxies):
@@ -187,23 +229,58 @@ class ClientAuthentication(Ice.Application):
 
     def run(self,argv):
 
-        print("GOLA")
-        
-        ##____________________CANAL USER_UPDATES______________##
-        adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
+        adapter = self.communicator().createObjectAdapterWithEndpoints('MainService', 'tcp')
         adapter.activate()
-    
-        user_updates_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'UserUpdates')
-        user_updates_subscriber = UserUpdates()
-        user_updates_subscriber_proxy = adapter.addWithUUID(user_updates_subscriber)
-        user_updates_topic.subscribeAndGetPublisher({}, user_updates_subscriber_proxy)
-        user_updates_subscriber.start()
-
-        service_implementation = AuthenticatorI(user_updates_subscriber)
+        
+        service_announce_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
+        service_announce_subscriber = ServiceAnnouncements("","","")
+        service_announce_subscriber_proxy = adapter.addWithUUID(service_announce_subscriber)
+        service_announce_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(service_announce_topic.getPublisher())
+        
+        service_implementation = AuthenticatorI(service_announce_subscriber, "", service_announce_publisher)
         service_proxy = adapter.addWithUUID(service_implementation)
         print(service_proxy, flush=True)
+        print(service_implementation.service_id)
+        
+        service_announce_subscriber._service_type = service_proxy.ice_id()
+        service_announce_subscriber._service_instance = service_implementation
+        service_announce_subscriber._service_proxy = service_proxy
+        service_implementation._prx_service = service_proxy
+        
+        service_announce_topic.subscribeAndGetPublisher({}, service_announce_subscriber_proxy)
+                
+        service_implementation.initService()
 
-        user_updates_publisher = IceFlix.UserUpdatesPrx.uncheckedCast(user_updates_topic.getPublisher())
+        #service_announce_publisher.newService(service_proxy, service_implementation.service_id)
+        #service_announce_publisher.announce(service_proxy, service_implementation.service_id)
+    
+        
+        self.shutdownOnInterrupt()
+        self.communicator().waitForShutdown()
+        
+        service_implementation.announcements.cancel()
+        service_announce_subscriber.poll_timer.cancel()
+        
+        service_announce_topic.unsubscribe(service_announce_subscriber_proxy)
+        
+        return 0
+
+
+        ##____________________CANAL USER_UPDATES______________##
+        # adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
+        # adapter.activate()
+    
+        # user_updates_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'UserUpdates')
+        # user_updates_subscriber = UserUpdates()
+        # user_updates_subscriber_proxy = adapter.addWithUUID(user_updates_subscriber)
+        # user_updates_topic.subscribeAndGetPublisher({}, user_updates_subscriber_proxy)
+        # user_updates_subscriber.start()
+
+        # service_implementation = AuthenticatorI(user_updates_subscriber)
+        # service_proxy = adapter.addWithUUID(service_implementation)
+        # print(service_proxy, flush=True)
+
+        # user_updates_publisher = IceFlix.UserUpdatesPrx.uncheckedCast(user_updates_topic.getPublisher())
 
         # ##____________________CANAL SERVICE_ANNOUNCEMENTS______________##
         # adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')

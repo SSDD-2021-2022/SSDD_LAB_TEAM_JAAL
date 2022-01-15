@@ -25,6 +25,7 @@ class MainI(IceFlix.Main):
         self._srv_announce_pub = srv_announce_pub
         self._updated = False
         self.announcements = None
+        # self.token = sys.argv[1]
         
         authenticatorList = []
         mediaCatalogsList = []
@@ -114,6 +115,9 @@ class MainI(IceFlix.Main):
     
     def getDB(self):
         return self.VolatileServices
+    
+    def getToken(self):
+        return self.token
     
     def sendDB(self, srv_proxy):
         currentDB = self.getDB()

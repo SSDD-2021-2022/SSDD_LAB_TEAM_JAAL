@@ -28,7 +28,7 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
         return list(self.authenticators.keys()) + list(self.catalogs.keys()) + list(self.mains.keys())
 
     def newService(self, service, srvId, current=None):  # pylint: disable=unused-argument
-        
+
         if not service.ice_isA(self._service_type) or service == self._service_proxy:
             return
         
@@ -44,7 +44,10 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
         elif service.ice_isA('::IceFlix::MediaCatalog'):
             print(f'New possible MediaCatalogService: {srvId}')
             srv_prx = IceFlix.MediaCatalogPrx.checkedCast(service)
-        
+
+        # if self._service_instance.isAdmin(srv_prx.getToken())  :
+        #     print("token no valido")
+        #     return
         self._service_instance.sendDB(srv_prx)
         
         
@@ -77,7 +80,10 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
         check_availability(self.authenticators)
         #check_availability(self.catalogs)
         check_availability(self.mains)
-        self._service_instance.check_volatile_services(self._service_instance.VolatileServices.authenticators)
+        if self._service_proxy.ice_isA('::IceFlix::Main'):
+            self._service_instance.check_volatile_services(self._service_instance.VolatileServices.authenticators)
+            #self._service_instance.check_volatile_services(self._service_instance.VolatileServices.mediaCatalogs)
+
         
         self.poll_timer = threading.Timer(5.0, self.remote_wrong_proxies) #no ponemos los parentesis a la funcion porque sino cogeria lo que retorna como valor
         self.poll_timer.start()

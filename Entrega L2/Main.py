@@ -17,9 +17,10 @@ class MainI(IceFlix.Main):
     # listaObjAuth = []
     # listaObjCtg = []
 
-    def __init__(self, service_announcements_subscriber):
+    def __init__(self, service_announcements_subscriber, proxyMainService):
         self._service_announcements_subscriber = service_announcements_subscriber
         self._id_ = str(uuid.uuid4())
+        self.proxyMainService = proxyMainService
         # self.authenticators = {}
         # self.catalogs = {}
         # self.mains = {} 
@@ -32,8 +33,8 @@ class MainI(IceFlix.Main):
         self.VolatileServices.mediaCatalogs = mediaCatalogsList
         
         self._updated = False
-    
 
+        self.announcements = None
         
     @property
     def service_id(self):
@@ -47,6 +48,19 @@ class MainI(IceFlix.Main):
             admin = True
         
         return admin
+
+    def initService(self):
+        print("Inicio de servicios")
+        self._service_announcements_subscriber.newService(self.proxyMainService,self.service_id)
+
+        self.announcements = threading.Timer(3.0, self.serviceAnnouncing)
+        self.announcements.start()
+
+    def serviceAnnouncing(self):
+        self._service_announcements_subscriber.announce(self.proxyMainService,self.service_id)
+        time = 10 + random.uniform(-2,2)
+        self.announcements = threading.Timer(time,self.serviceAnnouncing)
+        self.announcements.start()
 
     def register(self, service, current = None):
         try:
@@ -147,6 +161,8 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
         self.catalogs = {}
         self.mains = {}
         self.poll_timer = threading.Timer(5.0, self.remote_wrong_proxies) #no ponemos los parentesis a la funcion porque sino cogeria lo que retorna como valor
+        self.announce_time = None
+        #lanzar new Service en run
 
     @property
     def known_services(self):
@@ -160,18 +176,16 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
         
         if service.ice_isA('::IceFlix::Main'):
             print(f'New possible MainService: {srvId}')
-            self.mains[srvId] = IceFlix.MainPrx.uncheckedCast(service)
+           
             # Comprobar token administracion
             srv_prx = IceFlix.MainPrx.checkedCast(service)
         
         elif service.ice_isA('::IceFlix::Authenticator'):
             print(f'New possible AuthenticatorService: {srvId}')
-            self.authenticators[srvId] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
             srv_prx = IceFlix.AuthenticatorPrx.checkedCast(service)
             
         elif service.ice_isA('::IceFlix::MediaCatalog'):
             print(f'New possible MediaCatalogService: {srvId}')
-            self.catalogs[srvId] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
             srv_prx = IceFlix.MediaCatalogPrx.checkedCast(service)
         
         self._service_instance.sendDB(srv_prx)
@@ -198,15 +212,7 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
              #actualiza base de datos
         print(self.known_services)
         
-        
-
-    def lanzarAnnounce(self,publisher,service,srvId,current=None):
-        publisher.announce(service,srvId)
-        announce = threading.Timer(12.0,self.lanzarAnnounce,(publisher,service,srvId,))
-        announce.start()
-
-            
-
+    
     def remote_wrong_proxies(self):
         check_availability(self.authenticators)
         check_availability(self.catalogs)
@@ -214,6 +220,7 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
 
         self.poll_timer = threading.Timer(5.0, self.remote_wrong_proxies) #no ponemos los parentesis a la funcion porque sino cogeria lo que retorna como valor
         self.poll_timer.start()
+
 
     def start(self):
         '''Start current timer'''
@@ -231,11 +238,11 @@ class ServerMain(Ice.Application):
         adapter = self.communicator().createObjectAdapterWithEndpoints('MainService', 'tcp')
         adapter.activate()
         
-        service_announce_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'service_announcements')
+        service_announce_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
         service_announce_subscriber = ServiceAnnouncements("","","")
         service_announce_subscriber_proxy = adapter.addWithUUID(service_announce_subscriber)
         
-        service_implementation = MainI(service_announce_subscriber)
+        service_implementation = MainI(service_announce_subscriber,"")
         service_proxy = adapter.addWithUUID(service_implementation)
         print(service_proxy, flush=True)
         print(service_implementation.service_id)
@@ -243,11 +250,12 @@ class ServerMain(Ice.Application):
         service_announce_subscriber._service_type = service_proxy.ice_id()
         service_announce_subscriber._service_instance = service_implementation
         service_announce_subscriber._service_proxy = service_proxy
-        
+        service_implementation.proxyMainService = service_proxy
         service_announce_topic.subscribeAndGetPublisher({}, service_announce_subscriber_proxy)
                 
         service_announce_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(service_announce_topic.getPublisher())
-        service_announce_publisher.newService(service_proxy, service_implementation.service_id)
+        service_implementation.initService()
+        #service_announce_publisher.newService(service_proxy, service_implementation.service_id)
         #service_announce_publisher.announce(service_proxy, service_implementation.service_id)
     
         

@@ -231,7 +231,7 @@ class ClientAuthentication(Ice.Application):
 
         discover_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
         discover_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(discover_topic.getPublisher())
-        discover_publisher.newService(service_proxy,service_implementation.service_id)
+        discover_publisher.announce(service_proxy,service_implementation.service_id)
 
         # #discover_publisher.announce(service_proxy,service_implementation.service_id)
 

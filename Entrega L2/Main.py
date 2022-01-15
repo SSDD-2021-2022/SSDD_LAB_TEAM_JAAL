@@ -12,29 +12,31 @@ import IceFlix
 import random
 import threading
 import topics
+from ServiceAnnounce import ServiceAnnouncements
 
 class MainI(IceFlix.Main):
     # listaObjAuth = []
     # listaObjCtg = []
 
-    def __init__(self, service_announcements_subscriber, proxyMainService):
-        self._service_announcements_subscriber = service_announcements_subscriber
+    def __init__(self, service_announcements_subscriber, prx_service, srv_announce_pub):
         self._id_ = str(uuid.uuid4())
-        self.proxyMainService = proxyMainService
-        # self.authenticators = {}
-        # self.catalogs = {}
-        # self.mains = {} 
-        self.VolatileServices = IceFlix.VolatileServices()
+        self._service_announcements_subscriber = service_announcements_subscriber
+        self._prx_service = prx_service
+        self._srv_announce_pub = srv_announce_pub
+        self._updated = False
+        self.announcements = None
         
         authenticatorList = []
         mediaCatalogsList = []
         
+        self.VolatileServices = IceFlix.VolatileServices()
         self.VolatileServices.authenticators = authenticatorList
         self.VolatileServices.mediaCatalogs = mediaCatalogsList
         
-        self._updated = False
-
-        self.announcements = None
+        
+        # self.authenticators = {}
+        # self.catalogs = {}
+        # self.mains = {} 
         
     @property
     def service_id(self):
@@ -49,27 +51,13 @@ class MainI(IceFlix.Main):
         
         return admin
 
-    def initService(self):
-        print("Inicio de servicios")
-        self._service_announcements_subscriber.newService(self.proxyMainService,self.service_id)
-
-        self.announcements = threading.Timer(3.0, self.serviceAnnouncing)
-        self.announcements.start()
-
-    def serviceAnnouncing(self):
-        self._service_announcements_subscriber.announce(self.proxyMainService,self.service_id)
-        time = 10 + random.uniform(-2,2)
-        self.announcements = threading.Timer(time,self.serviceAnnouncing)
-        self.announcements.start()
-
-    def register(self, service, current = None):
+    def register(self, service, srvId):
         try:
-            print(service.ice_id())
             if(service.ice_isA("::IceFlix::Authenticator")):
-                self.listaObjAuth.append(service)
+                self.VolatileServices.authenticators.append(IceFlix.AuthenticatorPrx.uncheckedCast(service))
             elif(service.ice_isA("::IceFlix::MediaCatalog")):
-                self.listaObjCtg.append(service)
-                print(self.listaObjCtg)
+                self.VolatileServices.mediaCatalogs.apeend(IceFlix.MediaCatalogPrx.uncheckedCast(service))
+                print(self.VolatileServices.mediaCatalogs)
             else:
                 raise IceFlix.UnknownService
                 
@@ -111,6 +99,19 @@ class MainI(IceFlix.Main):
             
         return IceFlix.MediaCatalogPrx.uncheckedCast(proxyCtg)
     
+    def initService(self):
+        print("Inicio de servicios")
+        self._srv_announce_pub.newService(self._prx_service,self.service_id)
+
+        self.announcements = threading.Timer(3.0, self.serviceAnnouncing)
+        self.announcements.start()
+
+    def serviceAnnouncing(self):
+        self._srv_announce_pub.announce(self._prx_service,self.service_id)
+        time = 10 + random.uniform(-2,2)
+        self.announcements = threading.Timer(time,self.serviceAnnouncing)
+        self.announcements.start()
+    
     def getDB(self):
         return self.VolatileServices
     
@@ -123,114 +124,23 @@ class MainI(IceFlix.Main):
     def updateDB(self, currentDB, srvId, current = None):
         if self._updated == True:
             return
+        self.VolatileServices = currentDB
         print("Base de datos actualizada desde: " + str(srvId))
         self._updated = True
-        
-    def returnUpdated(self):
-        return self._updated
-        
-        
 
-
-# metodo de check proxy para ver que proxy hay que eliminar. Como este metodo no usa self lo sacamos fuera de la clase
-def check_availability(proxies):
-    '''Chech ping of all stored proxies'''
-    wrong_proxies = []
-    for proxyId in proxies:
-        try:
-            proxies[proxyId].ice_ping()
-        except Exception as error:
-            print(f'Proxy "{proxyId}" seems offline: {error}')
-            wrong_proxies.append(proxyId)
-
-    for proxyId in wrong_proxies:
-        del proxies[proxyId]
-        
-        
-class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
-
-    def __init__(self, service_type, service_instance, service_proxy, current=None):
-        """Initialize the Discover object with empty services."""
-        # self.volatile_services = IceFlix.VolatileServices()
-        #aututhenticators = self.volatile_services.AuthenticatorList()
-        self._id_ = str(uuid.uuid4())
-        self._service_type = service_type
-        self._service_instance = service_instance
-        self._service_proxy = service_proxy
-        self.authenticators = {}
-        self.catalogs = {}
-        self.mains = {}
-        self.poll_timer = threading.Timer(5.0, self.remote_wrong_proxies) #no ponemos los parentesis a la funcion porque sino cogeria lo que retorna como valor
-        self.announce_time = None
-        #lanzar new Service en run
-
-    @property
-    def known_services(self):
-        """Get serviceIds for all services."""
-        return list(self.authenticators.keys()) + list(self.catalogs.keys()) + list(self.mains.keys())
-
-    def newService(self, service, srvId, current=None):  # pylint: disable=unused-argument
-        
-        if not service.ice_isA(self._service_type) or service == self._service_proxy:
-            return
-        
-        if service.ice_isA('::IceFlix::Main'):
-            print(f'New possible MainService: {srvId}')
-           
-            # Comprobar token administracion
-            srv_prx = IceFlix.MainPrx.checkedCast(service)
-        
-        elif service.ice_isA('::IceFlix::Authenticator'):
-            print(f'New possible AuthenticatorService: {srvId}')
-            srv_prx = IceFlix.AuthenticatorPrx.checkedCast(service)
-            
-        elif service.ice_isA('::IceFlix::MediaCatalog'):
-            print(f'New possible MediaCatalogService: {srvId}')
-            srv_prx = IceFlix.MediaCatalogPrx.checkedCast(service)
-        
-        self._service_instance.sendDB(srv_prx)
-        
-        
-    def announce(self, service, srvId, current=None):  # pylint: disable=unused-argument
-        """Check service type and add it."""
-        if srvId in self.known_services:
-            print(f'Servicio {srvId} anunciandose')
-            print("Servicio ya conocido")
-            print(self.known_services)
-            return
-        if service.ice_isA('::IceFlix::Authenticator'):
-            print(f'New Authenticator service: {srvId}')
-            self.authenticators[srvId] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
-            
-        elif service.ice_isA('::IceFlix::MediaCatalog'):
-            print(f'New MediaCatalog service: {srvId}')
-            self.catalogs[srvId] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
-
-        elif service.ice_isA('::IceFlix::Main'):
-             print(f'New Main service: {srvId}')
-             self.mains[srvId] = IceFlix.MainPrx.uncheckedCast(service)
-             #actualiza base de datos
-        print(self.known_services)
-        
+    def check_volatile_services(self, volatile_services):
+        wrong_proxies = []
+        for vlt_srv in volatile_services:
+            try:
+                vlt_srv.ice_ping()
+            except Exception as error:
+                print(f'Proxy "{vlt_srv}" seems offline: {error}')
+                wrong_proxies.append(vlt_srv)
     
-    def remote_wrong_proxies(self):
-        check_availability(self.authenticators)
-        check_availability(self.catalogs)
-        check_availability(self.mains)
-
-        self.poll_timer = threading.Timer(5.0, self.remote_wrong_proxies) #no ponemos los parentesis a la funcion porque sino cogeria lo que retorna como valor
-        self.poll_timer.start()
-
-
-    def start(self):
-        '''Start current timer'''
-        self.poll_timer.start() #podemos hacer una comprobacion de que ya esta arrancado o parado
-
-    def stop(self):
-        '''Cancel current timer'''
-        self.poll_timer.cancel()
-
-
+        for srv_prx in wrong_proxies:
+            volatile_services.remove(srv_prx)
+    
+        print("VOLATILE SERVICES AUTH " + str(volatile_services))
 
 class ServerMain(Ice.Application):
     
@@ -241,8 +151,9 @@ class ServerMain(Ice.Application):
         service_announce_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
         service_announce_subscriber = ServiceAnnouncements("","","")
         service_announce_subscriber_proxy = adapter.addWithUUID(service_announce_subscriber)
+        service_announce_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(service_announce_topic.getPublisher())
         
-        service_implementation = MainI(service_announce_subscriber,"")
+        service_implementation = MainI(service_announce_subscriber, "", service_announce_publisher)
         service_proxy = adapter.addWithUUID(service_implementation)
         print(service_proxy, flush=True)
         print(service_implementation.service_id)
@@ -250,10 +161,10 @@ class ServerMain(Ice.Application):
         service_announce_subscriber._service_type = service_proxy.ice_id()
         service_announce_subscriber._service_instance = service_implementation
         service_announce_subscriber._service_proxy = service_proxy
-        service_implementation.proxyMainService = service_proxy
+        service_implementation._prx_service = service_proxy
+        
         service_announce_topic.subscribeAndGetPublisher({}, service_announce_subscriber_proxy)
                 
-        service_announce_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(service_announce_topic.getPublisher())
         service_implementation.initService()
         #service_announce_publisher.newService(service_proxy, service_implementation.service_id)
         #service_announce_publisher.announce(service_proxy, service_implementation.service_id)
@@ -261,6 +172,9 @@ class ServerMain(Ice.Application):
         
         self.shutdownOnInterrupt()
         self.communicator().waitForShutdown()
+        
+        service_implementation.announcements.cancel()
+        service_announce_subscriber.poll_timer.cancel()
         
         service_announce_topic.unsubscribe(service_announce_subscriber_proxy)
         

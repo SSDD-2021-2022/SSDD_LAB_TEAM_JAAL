@@ -14,7 +14,7 @@ import Ice
 Ice.loadSlice('iceflix.ice')
 import IceFlix
 
-from Main import ServiceAnnouncements
+from ServiceAnnounce import ServiceAnnouncements
 
 
 class AuthenticatorI(IceFlix.Authenticator):

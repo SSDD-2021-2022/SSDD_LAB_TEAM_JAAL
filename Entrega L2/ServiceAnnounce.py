@@ -45,9 +45,6 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
             print(f'New possible MediaCatalogService: {srvId}')
             srv_prx = IceFlix.MediaCatalogPrx.checkedCast(service)
 
-        # if self._service_instance.isAdmin(srv_prx.getToken())  :
-        #     print("token no valido")
-        #     return
         self._service_instance.sendDB(srv_prx)
         
         

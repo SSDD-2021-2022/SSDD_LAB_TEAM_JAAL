@@ -5,6 +5,8 @@ from sqlite3 import adapt
 import sys
 from time import process_time_ns, sleep
 import uuid
+import signal
+import os
 import Ice
 Ice.loadSlice('iceflix.ice')
 import IceFlix
@@ -20,6 +22,8 @@ class MainI(IceFlix.Main):
 
     def __init__(self, service_announcements_subscriber, prx_service, srv_announce_pub):
         self._id_ = str(uuid.uuid4())
+        # self._comunicator = comunicator
+        self._token_admin = sys.argv[1]
         self._service_announcements_subscriber = service_announcements_subscriber
         self._prx_service = prx_service
         self._srv_announce_pub = srv_announce_pub
@@ -120,18 +124,29 @@ class MainI(IceFlix.Main):
         return self.token
     
     def sendDB(self, srv_proxy):
-        currentDB = self.getDB()
-        srvId = self.service_id
-        print("Enviando BD...")
-        srv_proxy.updateDB(currentDB, srvId)
+        is_valid_token = srv_proxy.isAdmin(self._token_admin)
+        if not is_valid_token:
+            currentDB = self.getDB()
+            srvId = str(False)
+            srv_proxy.updateDB(currentDB, srvId)
+        else:
+            currentDB = self.getDB()
+            srvId = self.service_id
+            print("Enviando BD...")
+            srv_proxy.updateDB(currentDB, srvId)
         
     def updateDB(self, currentDB, srvId, current = None):
+        if srvId == "False":
+            print("Token de administración erróneo")
+            os.kill(os.getpid(), signal.SIGINT)
+            # matar al proceso, no se puede con sys.exit
         if self._updated == True:
             return
         self.VolatileServices = currentDB
-        print("Base de datos actualizada desde: " + str(srvId))
+        print
+        ("Base de datos actualizada desde: " + str(srvId))
         self._updated = True
-
+        
     def check_volatile_services(self, volatile_services):
         wrong_proxies = []
         for vlt_srv in volatile_services:

@@ -53,17 +53,17 @@ class MainI(IceFlix.Main):
         return admin
 
     def register(self, service, srvId):
-        try:
-            if(service.ice_isA("::IceFlix::Authenticator")):
-                self.VolatileServices.authenticators.append(IceFlix.AuthenticatorPrx.uncheckedCast(service))
-            elif(service.ice_isA("::IceFlix::MediaCatalog")):
-                self.VolatileServices.mediaCatalogs.apeend(IceFlix.MediaCatalogPrx.uncheckedCast(service))
-                print(self.VolatileServices.mediaCatalogs)
-            else:
-                raise IceFlix.UnknownService
+        # try:
+        if(service.ice_isA("::IceFlix::Authenticator")):
+            self.VolatileServices.authenticators.append(IceFlix.AuthenticatorPrx.uncheckedCast(service))
+        elif(service.ice_isA("::IceFlix::MediaCatalog")):
+            self.VolatileServices.mediaCatalogs.apeend(IceFlix.MediaCatalogPrx.uncheckedCast(service))
+            print(self.VolatileServices.mediaCatalogs)
+        else:
+            raise IceFlix.UnknownService
                 
-        except IceFlix.UnknownService:
-            print("Servicio desconocido")
+        # except IceFlix.UnknownService:
+        #     print("Servicio desconocido")
 
     def getAuthenticator(self, current=None):
         

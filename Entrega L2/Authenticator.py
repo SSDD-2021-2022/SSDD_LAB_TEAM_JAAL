@@ -18,11 +18,12 @@ import IceFlix
 UB_JSON_USERS = "./usersBD/"
 
 from ServiceAnnounce import ServiceAnnouncements
+from AuthenticatorChannel import Revocations
 
 
 class AuthenticatorI(IceFlix.Authenticator):
 
-    def __init__(self, service_announcements_subscriber, prx_service, srv_announce_pub):
+    def __init__(self, service_announcements_subscriber, prx_service, srv_announce_pub, revocations_subscriber, revocations_publisher):
         #self._user_updates_subscriber_ = user_updates_subscriber
         self._id_ = str(uuid.uuid4())
         self._service_announcements_subscriber = service_announcements_subscriber
@@ -30,6 +31,8 @@ class AuthenticatorI(IceFlix.Authenticator):
         self._srv_announce_pub = srv_announce_pub
         self._updated = False
         self.announcements = None
+        self.revocations_subscriber = revocations_subscriber
+        self.revocations_publisher = revocations_publisher
         
         UsersPasswords = {}
         UsersToken = {}
@@ -91,19 +94,27 @@ class AuthenticatorI(IceFlix.Authenticator):
             self.UsersDB.usersToken[user] = token
 
         print("diccionario "+str(self.UsersDB.usersToken))
+        #A los 2 min revocar token y dar otro
+        revokeToken =threading.Timer(120.0,self.revokeTokenUser, token)
+        revokeToken.start()
 
         return token
 
         # except IceFlix.Unauthorized:
         #     print("Usuario no autorizado")
+    def revokeTokenUser(self,token):
+        #eliminar y generar nuevo token
+        #newToken = uuid.uuid4().hex
+        #self.UsersDB.usersToken[user] = token
+        
+        self.revocations_publisher.revokeToken(token, self._id_)
             
     def isAuthorized(self, userToken, current = None):
         isAuth = False
 
         if userToken in self.UsersDB.usersToken.values():
             isAuth = True
-
-                
+  
         return isAuth
 
     def whois(self, userToken, current = None):
@@ -129,21 +140,15 @@ class AuthenticatorI(IceFlix.Authenticator):
         global UB_JSON_USERS
         # try: 
         usuarioExistente = False
+        main_c = random.choice(list(self._service_announcements_subscriber.mains.values()))
 
-        if(self.main_c.isAdmin(adminToken) == False):
+        if(main_c.isAdmin(adminToken) == False):
             raise IceFlix.Unauthorized
         
-        if(self.main_c.isAdmin(adminToken)):
+        if(main_c.isAdmin(adminToken)):
             #data = json.loads(open('credenciales.json').read())
-
-            for key, value in self.UsersDB.userPasswords.items():
-                if key == user:
-                    usuarioExistente = True
-                    value = passwordHash
-            if  not usuarioExistente:
-                self.UsersDB.userPasswords[user] = passwordHash
-            else:
-                print("Usuario "+user+" existente. Password cambiada con éxito")
+            self.UsersDB.userPasswords[user] = passwordHash
+            #print("Usuario "+user+" existente. Password cambiada con éxito")
             
             ruta_dir = UB_JSON_USERS+"bdUser_"+self.service_id
             with open(ruta_dir+'/credenciales.json','w') as file:
@@ -169,17 +174,23 @@ class AuthenticatorI(IceFlix.Authenticator):
 
     def removeUser(self, user, adminToken, current = None):
         # try:
-        if(self.main_c.isAdmin(adminToken) == False):
+        userEncontrado = False
+        print("lista de mains que se han publicado:\n"+str(self._service_announcements_subscriber.mains))
+        main_c = random.choice(list(self._service_announcements_subscriber.mains.values()))
+        if(main_c.isAdmin(adminToken) == False):
             raise IceFlix.Unauthorized
         
-        if(self.main_c.isAdmin(adminToken)):
+        if(main_c.isAdmin(adminToken)):
             for key, value in self.UsersDB.userPasswords.items():
                 if key == user:
-                    self.UsersDB.userPasswords.pop(user)
-
+                    userEncontrado = True
+                    #self.UsersDB.userPasswords.pop(user)
+            if userEncontrado:
+                self.UsersDB.userPasswords.pop(user)
             ruta_dir = UB_JSON_USERS+"bdUser_"+self.service_id
             with open(ruta_dir+'/credenciales.json','w') as file:
                 json.dump(self.UsersDB.userPasswords, file) 
+        print("Base de datos modificada\n"+str(self.UsersDB.userPasswords))
 
     def initService(self):
         print("Inicio de servicios")
@@ -263,16 +274,23 @@ class UserUpdates(IceFlix.UserUpdates):
 class ClientAuthentication(Ice.Application):
 
     def run(self,argv):
-
-        adapter = self.communicator().createObjectAdapterWithEndpoints('MainService', 'tcp')
+        adapter = self.communicator().createObjectAdapterWithEndpoints('AuthenticatorService', 'tcp')
         adapter.activate()
         
+        #subscribe to ServiceAnnounce channel
         service_announce_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
         service_announce_subscriber = ServiceAnnouncements("","","")
         service_announce_subscriber_proxy = adapter.addWithUUID(service_announce_subscriber)
         service_announce_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(service_announce_topic.getPublisher())
+
+        #subscribe to Revocations Channel
+        revocations_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'Revocations')
+        revocations_subscriber = Revocations()
+        revocations_subscriber_proxy = adapter.addWithUUID(revocations_subscriber)
+        revocations_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(revocations_topic.getPublisher())
+
         
-        service_implementation = AuthenticatorI(service_announce_subscriber, "", service_announce_publisher)
+        service_implementation = AuthenticatorI(service_announce_subscriber, "", service_announce_publisher, revocations_subscriber, revocations_publisher)
         service_proxy = adapter.addWithUUID(service_implementation)
         print(service_proxy, flush=True)
         print(service_implementation.service_id)
@@ -285,7 +303,13 @@ class ClientAuthentication(Ice.Application):
         service_announce_topic.subscribeAndGetPublisher({}, service_announce_subscriber_proxy)
                 
         service_implementation.initService()
-
+        #def llamarRemove():
+        #    service_implementation.addUser("we","hola","iceflixadmin")
+        #    print("metodo remove ejecutado")
+        #t=threading.Timer(16.0, llamarRemove)
+        #t.start()
+        #print("remove user ejecutado")
+        #service_implementation.removeUser("ssdd","iceflixadmin")
         #service_announce_publisher.newService(service_proxy, service_implementation.service_id)
         #service_announce_publisher.announce(service_proxy, service_implementation.service_id)
     

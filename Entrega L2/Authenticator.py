@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 #from _typeshed import Self
-from os import remove
+from os import mkdir, remove, rmdir
+from shutil import rmtree
 import sys
 import threading
 import time
@@ -13,6 +14,8 @@ import topics
 import Ice
 Ice.loadSlice('iceflix.ice')
 import IceFlix
+
+UB_JSON_USERS = "./usersBD/"
 
 from ServiceAnnounce import ServiceAnnouncements
 
@@ -34,20 +37,49 @@ class AuthenticatorI(IceFlix.Authenticator):
         self.UsersDB = IceFlix.UsersDB()
         self.UsersDB.userPasswords = UsersPasswords
         self.UsersDB.usersToken = UsersToken
-
+        self.newDirectory()
+        #self.newBD()
+    
     @property
     def service_id(self):
         """Get instance ID."""
         return self._id_
+    
+    def newDirectory(self):
+        global UB_JSON_USERS
+        ruta_dir = UB_JSON_USERS+"bdUser_"+self.service_id
+        mkdir(ruta_dir)
+        #self.newBD(self)
+
+    def newBD(self):
+        global UB_JSON_USERS
+        ruta_dir = UB_JSON_USERS+"bdUser_"+self.service_id
+        with open(ruta_dir+'/credenciales.json','w') as file:
+            json.dump(self.UsersDB.userPasswords, file) 
+    
+    def updateLastServiceDB(self):
+        with open('credenciales.json','w') as file:
+            json.dump(self.UsersDB.userPasswords, file) 
+    
+    def checkLastInstance(self):
+        dictAuth = self._service_announcements_subscriber.authenticators
+        if(len(dictAuth) == 1 and dictAuth[self._id_]):
+            print("Ultimo servicio en ejecucion, actualizando base de datos de credenciales.json...")
+            self.updateLastServiceDB()
+
+
+
+    def removeDirR(self):
+        global UB_JSON_USERS
+        ruta_dir = UB_JSON_USERS+"bdUser_"+self.service_id
+        rmtree(ruta_dir)
 
     def refreshAuthorization(self,user, passwordHash, current=None):
         # try: 
-        token = ""
-        data = json.loads(open('credenciales.json').read())
 
-        for usuario in data['users']:
-            userJSON = usuario['user']
-            passHashJSON = usuario["passwordHash"]
+        for key, value in self.UsersDB.userPasswords.items():
+            userJSON = key
+            passHashJSON = value
             
             if  (userJSON == user and passHashJSON == passwordHash):
                 token = uuid.uuid4().hex
@@ -94,6 +126,7 @@ class AuthenticatorI(IceFlix.Authenticator):
         #     print("Usuario no autorizado")
 
     def addUser(self, user, passwordHash, adminToken, current = None):
+        global UB_JSON_USERS
         # try: 
         usuarioExistente = False
 
@@ -101,23 +134,35 @@ class AuthenticatorI(IceFlix.Authenticator):
             raise IceFlix.Unauthorized
         
         if(self.main_c.isAdmin(adminToken)):
-            i = 0
-            data = json.loads(open('credenciales.json').read())
+            #data = json.loads(open('credenciales.json').read())
 
-            for usuario in data["users"]:
-                print(usuario)
-                if(usuario['user'] == user):
+            for key, value in self.UsersDB.userPasswords.items():
+                if key == user:
                     usuarioExistente = True
-                    usuario['passwordHash'] = passwordHash
-            
-            if(usuarioExistente==False):
-                dict = {"user":str(user), "passwordHash":str(passwordHash)}
-                data["users"].append(dict)
+                    value = passwordHash
+            if  not usuarioExistente:
+                self.UsersDB.userPasswords[user] = passwordHash
             else:
                 print("Usuario "+user+" existente. Password cambiada con éxito")
             
-            with open('credenciales.json', 'w') as data_file:
-                data = json.dump(data, data_file)
+            ruta_dir = UB_JSON_USERS+"bdUser_"+self.service_id
+            with open(ruta_dir+'/credenciales.json','w') as file:
+                json.dump(self.UsersDB.userPasswords, file) 
+
+            # for usuario in data["users"]:
+            #     print(usuario)
+            #     if(usuario['user'] == user):
+            #         usuarioExistente = True
+            #         usuario['passwordHash'] = passwordHash
+            
+            # if(usuarioExistente==False):
+            #     dict = {"user":str(user), "passwordHash":str(passwordHash)}
+            #     data["users"].append(dict)
+            # else:
+            #     print("Usuario "+user+" existente. Password cambiada con éxito")
+            
+            # with open('credenciales.json', 'w') as data_file:
+            #     data = json.dump(data, data_file)
         
         # except IceFlix.Unauthorized:
         #     print("Usuario no autorizado")
@@ -128,17 +173,13 @@ class AuthenticatorI(IceFlix.Authenticator):
             raise IceFlix.Unauthorized
         
         if(self.main_c.isAdmin(adminToken)):
-            data = json.loads(open('credenciales.json').read())
-            for usuario in data["users"]:
-                if(usuario["user"] == user):
-                    data["users"].remove(usuario)
+            for key, value in self.UsersDB.userPasswords.items():
+                if key == user:
+                    self.UsersDB.userPasswords.pop(user)
 
-            with open('credenciales.json', 'w') as data_file:
-                data = json.dump(data, data_file)
-        print("Usuario "+user+" eliminado")
-        
-        # except IceFlix.Unauthorized:
-        #     print("Usuario no autorizado")
+            ruta_dir = UB_JSON_USERS+"bdUser_"+self.service_id
+            with open(ruta_dir+'/credenciales.json','w') as file:
+                json.dump(self.UsersDB.userPasswords, file) 
 
     def initService(self):
         print("Inicio de servicios")
@@ -149,10 +190,9 @@ class AuthenticatorI(IceFlix.Authenticator):
     def updateDBjson(self):
         data = json.loads(open('credenciales.json').read())
 
-        for usuario in data['users']:
-            userJSON = usuario['user']
-            passHashJSON = usuario["passwordHash"]
-            self.UsersDB.userPasswords[userJSON] = passHashJSON
+        for key,value in data.items():
+            self.UsersDB.userPasswords[key] = value
+        self.newBD()
 
     def serviceAnnouncing(self):
         if not self._updated:
@@ -251,8 +291,11 @@ class ClientAuthentication(Ice.Application):
     
         
         self.shutdownOnInterrupt()
-        self.communicator().waitForShutdown()
         
+       
+        self.communicator().waitForShutdown()
+        service_implementation.checkLastInstance()
+        service_implementation.removeDirR()
         service_implementation.announcements.cancel()
         service_announce_subscriber.poll_timer.cancel()
         

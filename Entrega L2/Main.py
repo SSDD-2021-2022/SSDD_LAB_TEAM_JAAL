@@ -17,8 +17,6 @@ import topics
 from ServiceAnnounce import ServiceAnnouncements
 
 class MainI(IceFlix.Main):
-    # listaObjAuth = []
-    # listaObjCtg = []
 
     def __init__(self, service_announcements_subscriber, prx_service, srv_announce_pub):
         self._id_ = str(uuid.uuid4())

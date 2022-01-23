@@ -304,10 +304,10 @@ class ClientAuthentication(Ice.Application):
         service_implementation.initService()
 
 
-        def llamarRemove():
-            service_implementation.addUser("jose", "antonio", "token")
-        t=threading.Timer(16.0, llamarRemove)
-        t.start()
+        # def llamarRemove():
+        #     service_implementation.addUser("jose", "antonio", "token")
+        # t=threading.Timer(16.0, llamarRemove)
+        # t.start()
 
 
     

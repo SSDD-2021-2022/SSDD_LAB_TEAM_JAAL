@@ -1,19 +1,104 @@
 #!/usr/bin/env python3
-
+from os import mkdir, remove, rmdir
+from shutil import rmtree
 import sys
 import uuid
 import json
 import Ice
+import topics
+import random
+import threading
 Ice.loadSlice('iceflix.ice')
 import IceFlix
-
+from ServiceAnnounce import ServiceAnnouncements
+from MediaCatalogChannel import CatalogUpdates
 EXIT_ERROR=1
+
+UB_JSON_CATALOG = "./catalogBD/"
 
 class MediaCatalogI(IceFlix.MediaCatalog):
     
-    def __init__(self, auth_c,main_c):
-        self.auth_c = auth_c
-        self.main_c = main_c
+    def __init__(self, service_announcements_subscriber, prx_service, srv_announce_pub, catalogUpdates_subscriber, catalogUpdates_publisher):
+        self._id_ = str(uuid.uuid4())
+        self._service_announcements_subscriber = service_announcements_subscriber
+        self._prx_service = prx_service
+        self._srv_announce_pub = srv_announce_pub
+        self._updated = False
+        self.announcements = None
+
+        self.catalogUpdates_subscriber = catalogUpdates_subscriber
+        self.catalogUpdates_publisher = catalogUpdates_publisher
+
+        MediaId = ""
+        Name = ""
+        TagsPerUser = {}
+        MediaDBList = []
+
+        self.MediaDB = IceFlix.MediaDB()
+        self.MediaDB.mediaId = MediaId
+        self.MediaDB.name = Name
+        self.MediaDB.TagsPerUser = TagsPerUser
+        self.MediaDBList = MediaDBList
+
+        self.newDirectory()
+        self.updateDBjson()
+
+    @property
+    def service_id(self):
+        """Get instance ID."""
+        return self._id_
+
+    def newDirectory(self):
+        global UB_JSON_CATALOG
+        ruta_dir = UB_JSON_CATALOG+"bdCatalog_"+self.service_id
+        mkdir(ruta_dir)
+        #self.newBD(self)
+
+    def newBD(self):
+        global UB_JSON_CATALOG
+        ruta_dir = UB_JSON_CATALOG+"bdCatalog_"+self.service_id
+        with open(ruta_dir+'/usuariosPeliculas.json','w') as file:
+            json.dump(self.UsersDB.userPasswords, file) 
+
+        with open(ruta_dir+'/infoPeliculas.json','w') as file:
+            json.dump(self.UsersDB.userPasswords, file) 
+    
+    def updateLastServiceDB(self, usuariosPeliculas):
+        with open('credenciales.json','w') as file:
+            json.dump(usuariosPeliculas, file) 
+    
+    def checkLastInstance(self):
+        dictAuth = self._service_announcements_subscriber.authenticators
+        if(len(dictAuth) == 1 and dictAuth[self._id_]):
+            print("Ultimo servicio en ejecucion, actualizando base de datos de credenciales.json...")
+            self.updateLastServiceDB()
+
+    def updateDBjson(self):
+        infoPeliculas = json.loads(open('infoPeliculas.json').read())
+        usuariosPeliculas = json.loads(open('usuariosPeliculas.json').read())
+
+        for key,value in infoPeliculas.items():
+            pelicula = self.MediaDB
+            pelicula.mediaId = key
+            pelicula.name = value
+
+            print(key+"  -->  "+value)
+            for usuario in usuariosPeliculas["users"]:
+                user = usuario["user"] #if usuario["user"] == user:
+                print(user)
+
+                listaTagsUsuario = usuario["tags"]
+                for id_pel, tagsUser in listaTagsUsuario.items():
+                    #print(str(id_pel)+" "+str(tagsUser))
+                    if id_pel == key:
+                        print("-------------------------"+str(key)+"-------"+str(tagsUser))
+                        pelicula.TagsPerUser[user] = tagsUser
+            self.MediaDBList.append(pelicula)
+        print(self.MediaDBList)
+
+                            
+    
+
 
     def getTile(self, mediaId, current=None):
         # try:
@@ -176,29 +261,105 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         # except IceFlix.WrongMediaId:
         #     print("Id de la pelicula incorrecto")
 
+    def initService(self):
+        print("Inicio de servicios")
+        self._srv_announce_pub.newService(self._prx_service,self.service_id)
+        self.announcements = threading.Timer(3.0, self.serviceAnnouncing)
+        self.announcements.start()
+
+    def serviceAnnouncing(self):
+        if not self._updated:
+            print("Base de Datos actualizada del json")
+            self.updateDBjson()
+            self._updated = True
+
+        self._srv_announce_pub.announce(self._prx_service,self.service_id)
+        time = 10 + random.uniform(-2,2)
+        self.announcements = threading.Timer(time,self.serviceAnnouncing)
+        self.announcements.start()
+    
+    def getDB(self):
+        return self.UsersDB
+
+    def sendDB(self, srv_proxy):
+        catalogDB = self.getDB()
+        srvId = self.service_id
+        print("Enviando BD...")
+        srv_proxy.updateDB(catalogDB, srvId)
+    
+    def updateDB(self, catalogDB, srvId, current = None):
+        if self._updated == True:
+            return
+        self.UsersDB = catalogDB
+        print("Base de datos actualizada desde: " + str(srvId))
+        self._updated = True
+        self._srv_announce_pub.announce(self._prx_service,self.service_id)
+
+    def check_availability(proxies):
+        '''Chech ping of all stored proxies'''
+        wrong_proxies = []
+        for proxyId in proxies:
+            try:
+                proxies[proxyId].ice_ping()
+            except Exception as error:
+                print(f'Proxy "{proxyId}" seems offline: {error}')
+                wrong_proxies.append(proxyId)
+
+        for proxyId in wrong_proxies:
+            del proxies[proxyId]
+
 class ClientCatalog(Ice.Application):    
 
     def run(self, argv):
-        
-        proxyMain = open("salida").read()
-        proxy = self.communicator().stringToProxy(proxyMain)
-        main_c = IceFlix.MainPrx.checkedCast(proxy)
-        
-        auth_c = main_c.getAuthenticator() 
-        
-        broker = self.communicator()
-        servant = MediaCatalogI(auth_c,main_c)
-        adapter = broker.createObjectAdapter("MediaCatalogAdapter")
-        
-        proxyCtg = adapter.add(servant, broker.stringToIdentity("mediacatalog1"))
-        print(proxyCtg, flush=False)
-        
+        adapter = self.communicator().createObjectAdapterWithEndpoints('MediaCatalogService', 'tcp')
         adapter.activate()
+
+        #subscribe and publisher to ServiceAnnounce channel
+        service_announce_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
+        service_announce_subscriber = ServiceAnnouncements("","","")
+        service_announce_subscriber_proxy = adapter.addWithUUID(service_announce_subscriber)
+        service_announce_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(service_announce_topic.getPublisher())
+
+        #subscribe and publisher to CatalogUpdates Channel
+        catalogUpdates_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'CatalogUpdates')
+        catalogUpdates_subscriber = CatalogUpdates("", "")
+        catalogUpdates_subscriber_proxy = adapter.addWithUUID(catalogUpdates_subscriber)
+        catalogUpdates_publisher = IceFlix.CatalogUpdatesPrx.uncheckedCast(catalogUpdates_topic.getPublisher())
+
+        service_implementation = MediaCatalogI(service_announce_subscriber, "", service_announce_publisher, catalogUpdates_subscriber, catalogUpdates_publisher)
+        service_proxy = adapter.addWithUUID(service_implementation)
+        print(service_proxy, flush=True)
+        print(service_implementation.service_id)
+
+        
+        #Asignacion al init de Service Announce
+        service_announce_subscriber._service_type = service_proxy.ice_id()
+        service_announce_subscriber._service_instance = service_implementation
+        service_announce_subscriber._service_proxy = service_proxy
+        service_implementation._prx_service = service_proxy
+
+        service_announce_topic.subscribeAndGetPublisher({}, service_announce_subscriber_proxy)
+
+
+        #Asignacion al init de catalogUpdates
+        catalogUpdates_subscriber._service_instance = service_implementation
+        catalogUpdates_subscriber._service_proxy = service_proxy
+
+        catalogUpdates_topic.subscribeAndGetPublisher({}, catalogUpdates_subscriber_proxy)
+
+        
+        
+        
         self.shutdownOnInterrupt()
-        pCtg= IceFlix.MediaCatalogPrx.checkedCast(proxyCtg)
-        main_c.register(pCtg)
-        broker.waitForShutdown()
+    
+        self.communicator().waitForShutdown()
+
+        service_announce_subscriber.poll_timer.cancel()
+        
+        service_announce_topic.unsubscribe(service_announce_subscriber_proxy)
+        
         return 0
+
 
 if __name__ == "__main__":
     ClientCatalog().main(sys.argv)

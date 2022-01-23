@@ -9,7 +9,7 @@ class UserUpdates (IceFlix.UserUpdates):
     def __init__(self, service_instance, service_proxy, current=None):
         """Initialize the Discover object with empty services."""
         # self.volatile_services = IceFlix.VolatileServices()
-        #aututhenticators = self.volatile_services.AuthenticatorList()
+        # aututhenticators = self.volatile_services.AuthenticatorList()
         # self._id_ = str(uuid.uuid4())
         # self._service_type = service_type
         self._service_instance = service_instance
@@ -54,8 +54,6 @@ class Revocations (IceFlix.Revocations):
                 
         if token_encontrado:
             self._service_instance.UsersDB.usersToken.pop(user)
-
-        return
     
     def revokeUser(self, user, srvId, current=None):
         #actualizamos json

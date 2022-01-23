@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from curses import use_default_colors
 from os import mkdir, remove, rmdir
 from shutil import rmtree
 import sys
@@ -37,11 +38,11 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         self.MediaDB = IceFlix.MediaDB()
         self.MediaDB.mediaId = MediaId
         self.MediaDB.name = Name
-        self.MediaDB.TagsPerUser = TagsPerUser
+        self.MediaDB.tagsPerUser = TagsPerUser
         self.MediaDBList = MediaDBList
 
         self.newDirectory()
-        self.updateDBjson()
+        #self.updateDBjson()
 
     @property
     def service_id(self):
@@ -57,11 +58,15 @@ class MediaCatalogI(IceFlix.MediaCatalog):
     def newBD(self):
         global UB_JSON_CATALOG
         ruta_dir = UB_JSON_CATALOG+"bdCatalog_"+self.service_id
-        with open(ruta_dir+'/usuariosPeliculas.json','w') as file:
-            json.dump(self.UsersDB.userPasswords, file) 
+        # with open(ruta_dir+'/usuariosPeliculas.json','w') as file:
+        #     json.dump(self.UsersDB.userPasswords, file) 
 
+        infoPeliculas = {}
+        for pelicula in self.MediaDBList:
+            infoPeliculas[pelicula.mediaId] = pelicula.name
+            
         with open(ruta_dir+'/infoPeliculas.json','w') as file:
-            json.dump(self.UsersDB.userPasswords, file) 
+            json.dump(infoPeliculas, file) 
     
     def updateLastServiceDB(self, usuariosPeliculas):
         with open('credenciales.json','w') as file:
@@ -78,28 +83,27 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         usuariosPeliculas = json.loads(open('usuariosPeliculas.json').read())
 
         for key,value in infoPeliculas.items():
-            pelicula = self.MediaDB
+            dic = {}
+            pelicula = IceFlix.MediaDB()
             pelicula.mediaId = key
             pelicula.name = value
 
-            print(key+"  -->  "+value)
             for usuario in usuariosPeliculas["users"]:
-                user = usuario["user"] #if usuario["user"] == user:
-                print(user)
-
+                user = usuario["user"]
                 listaTagsUsuario = usuario["tags"]
                 for id_pel, tagsUser in listaTagsUsuario.items():
-                    #print(str(id_pel)+" "+str(tagsUser))
                     if id_pel == key:
-                        print("-------------------------"+str(key)+"-------"+str(tagsUser))
-                        pelicula.TagsPerUser[user] = tagsUser
+                        dic[user] = tagsUser
+                        pelicula.tagsPerUser = dic
             self.MediaDBList.append(pelicula)
-        print(self.MediaDBList)
+
+        ruta_dir = UB_JSON_CATALOG+"bdCatalog_"+self.service_id
+        with open(ruta_dir+'/infoPeliculas.json','w') as file:
+            json.dump(infoPeliculas, file) 
+        with open(ruta_dir+'/usuariosPeliculas.json','w') as file:
+            json.dump(usuariosPeliculas, file) 
 
                             
-    
-
-
     def getTile(self, mediaId, current=None):
         # try:
         continuar = False
@@ -279,7 +283,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         self.announcements.start()
     
     def getDB(self):
-        return self.UsersDB
+        return self.MediaDBList
 
     def sendDB(self, srv_proxy):
         catalogDB = self.getDB()
@@ -290,8 +294,9 @@ class MediaCatalogI(IceFlix.MediaCatalog):
     def updateDB(self, catalogDB, srvId, current = None):
         if self._updated == True:
             return
-        self.UsersDB = catalogDB
+        self.MediaDBList = catalogDB        
         print("Base de datos actualizada desde: " + str(srvId))
+        self.newBD()
         self._updated = True
         self._srv_announce_pub.announce(self._prx_service,self.service_id)
 
@@ -348,7 +353,8 @@ class ClientCatalog(Ice.Application):
         catalogUpdates_topic.subscribeAndGetPublisher({}, catalogUpdates_subscriber_proxy)
 
         
-        
+        service_implementation.initService()
+
         
         self.shutdownOnInterrupt()
     

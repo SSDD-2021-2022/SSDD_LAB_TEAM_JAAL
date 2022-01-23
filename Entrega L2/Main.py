@@ -122,27 +122,32 @@ class MainI(IceFlix.Main):
         return self.token
     
     def sendDB(self, srv_proxy):
-        is_valid_token = srv_proxy.isAdmin(self._token_admin)
-        if not is_valid_token:
-            currentDB = self.getDB()
-            srvId = str(False)
-            srv_proxy.updateDB(currentDB, srvId)
-        else:
-            currentDB = self.getDB()
-            srvId = self.service_id
-            print("Enviando BD...")
-            srv_proxy.updateDB(currentDB, srvId)
+        try:
+            is_valid_token = srv_proxy.isAdmin(self._token_admin)
+            if not is_valid_token:
+                currentDB = self.getDB()
+                srvId = str(False)
+                srv_proxy.updateDB(currentDB, srvId)
+            else:
+                currentDB = self.getDB()
+                srvId = self.service_id
+                print("Enviando BD...")
+                srv_proxy.updateDB(currentDB, srvId)
+        except Exception as error:
+            print(f'Proxy "{srv_proxy}" seems offline: {error}')
+            return
         
     def updateDB(self, currentDB, srvId, current = None):
-        if srvId == "False":
-            print("Token de administración erróneo")
-            os.kill(os.getpid(), signal.SIGINT)
-            # matar al proceso, no se puede con sys.exit
         if self._updated == True:
             return
+        
+        if srvId == "False":
+            print("Token de administración erróneo")
+            current.adapter.getCommunicator().shutdown()
+            return
+    
         self.VolatileServices = currentDB
-        print
-        ("Base de datos actualizada desde: " + str(srvId))
+        print("Base de datos actualizada desde: " + str(srvId))
         self._updated = True
         
     def check_volatile_services(self, volatile_services):

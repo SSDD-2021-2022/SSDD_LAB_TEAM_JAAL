@@ -16,12 +16,24 @@ class UserUpdates (IceFlix.UserUpdates):
         self._service_proxy = service_proxy
 
     def newUser(self, user, passwordHash, srvId, current=None):
-        self._service_instance.UserDB.userPasswords[user] = passwordHash
-        print("hola")
-        
+        #actualizamos json
+        self._service_instance.newBD()
+
+        if srvId == self._service_instance.service_id:
+            return
+        else:
+            self._service_instance.UsersDB.userPasswords[user] = passwordHash
+            print("Usuario "+ user +" añadido.")
+
     def newToken(self, user, userToken, srvId, current=None):
-        self._service_instance.UserDB.usersToken[user] = userToken 
-        print("blas")
+        #actualizamos json
+        self._service_instance.newBD()
+        
+        if srvId == self._service_instance.service_id:
+            return
+        else:
+            self._service_instance.UsersDB.usersToken[user] = userToken 
+
     
 class Revocations (IceFlix.Revocations):
 
@@ -31,20 +43,35 @@ class Revocations (IceFlix.Revocations):
         self._service_proxy = service_proxy
 
     def revokeToken(self, userToken, srvId, current=None):
-        print("Token "+str(userToken)+" de "+str(srvId)+"ha expirado")
+        print("Token "+str(userToken)+" de "+str(srvId)+" ha expirado")
         token_encontrado = False
         user = ""
         
-        for key, value in self.service_instance.UsersDB.usersToken.items():
+        for key, value in self._service_instance.UsersDB.usersToken.items():
             if value == userToken:
                 token_encontrado = True
                 user = key
                 
         if token_encontrado:
-            self.service_instance.UsersDB.usersToken.pop(user)
+            self._service_instance.UsersDB.usersToken.pop(user)
 
         return
     
     def revokeUser(self, user, srvId, current=None):
-        print("HOLA")
+        #actualizamos json
+        self._service_instance.newBD()
+
+        if srvId == self._service_instance.service_id:
+            return
+        else:
+            user_encontrado = False
+        
+            for key, value in self._service_instance.UsersDB.userPasswords.items():
+                if key == user:
+                    user_encontrado = True
+                    
+            if user_encontrado:
+                self._service_instance.UsersDB.usersToken.pop(user)
+            print("Usuario "+ user +" eliminado.")
+        
     

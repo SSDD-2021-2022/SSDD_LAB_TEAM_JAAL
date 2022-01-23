@@ -95,11 +95,14 @@ class AuthenticatorI(IceFlix.Authenticator):
 
         if(token != ""):
             self.UsersDB.usersToken[user] = token
+            self.userUpdates_publisher.newToken(user, token, self.service_id)
 
         print("diccionario "+str(self.UsersDB.usersToken))
+
         #A los 2 min revocar token y dar otro
-        revokeToken =threading.Timer(10.0,self.revokeTokenUser, token)
+        revokeToken = threading.Timer(120.0, self.revokeTokenUser(token))
         revokeToken.start()
+        #self.revokeTokenUser(token)
 
         return token
 
@@ -111,7 +114,7 @@ class AuthenticatorI(IceFlix.Authenticator):
         #newToken = uuid.uuid4().hex
         #self.UsersDB.usersToken[user] = token
         
-        self.revocations_publisher.revokeToken(token, self._id_)
+        self.revocations_publisher.revokeToken(token, self.service_id)
             
     def isAuthorized(self, userToken, current = None):
         isAuth = False
@@ -157,24 +160,12 @@ class AuthenticatorI(IceFlix.Authenticator):
             ruta_dir = UB_JSON_USERS+"bdUser_"+self.service_id
             with open(ruta_dir+'/credenciales.json','w') as file:
                 json.dump(self.UsersDB.userPasswords, file) 
-
-            # for usuario in data["users"]:
-            #     print(usuario)
-            #     if(usuario['user'] == user):
-            #         usuarioExistente = True
-            #         usuario['passwordHash'] = passwordHash
-            
-            # if(usuarioExistente==False):
-            #     dict = {"user":str(user), "passwordHash":str(passwordHash)}
-            #     data["users"].append(dict)
-            # else:
-            #     print("Usuario "+user+" existente. Password cambiada con éxito")
-            
-            # with open('credenciales.json', 'w') as data_file:
-            #     data = json.dump(data, data_file)
         
         # except IceFlix.Unauthorized:
         #     print("Usuario no autorizado")
+
+        self.userUpdates_publisher.newUser(user, passwordHash, self.service_id)
+
 
     def removeUser(self, user, adminToken, current = None):
         # try:
@@ -195,6 +186,10 @@ class AuthenticatorI(IceFlix.Authenticator):
             with open(ruta_dir+'/credenciales.json','w') as file:
                 json.dump(self.UsersDB.userPasswords, file) 
         print("Base de datos modificada\n"+str(self.UsersDB.userPasswords))
+
+        self.revocations_publisher.revokeUser(user, self.service_id)
+
+
 
     def initService(self):
         print("Inicio de servicios")
@@ -268,13 +263,13 @@ class ClientAuthentication(Ice.Application):
         userUpdates_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'UserUpdates')
         userUpdates_subscriber = UserUpdates("", "")
         userUpdates_subscriber_proxy = adapter.addWithUUID(userUpdates_subscriber)
-        userUpdates_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(userUpdates_topic.getPublisher())
+        userUpdates_publisher = IceFlix.UserUpdatesPrx.uncheckedCast(userUpdates_topic.getPublisher())
 
         #subscribe and publisher to Revocations Channel
         revocations_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'Revocations')
         revocations_subscriber = Revocations("", "")
         revocations_subscriber_proxy = adapter.addWithUUID(revocations_subscriber)
-        revocations_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(revocations_topic.getPublisher())
+        revocations_publisher = IceFlix.RevocationsPrx.uncheckedCast(revocations_topic.getPublisher())
 
         service_implementation = AuthenticatorI(service_announce_subscriber, "", service_announce_publisher, userUpdates_subscriber, userUpdates_publisher, revocations_subscriber, revocations_publisher)
         service_proxy = adapter.addWithUUID(service_implementation)
@@ -310,10 +305,10 @@ class ClientAuthentication(Ice.Application):
 
 
         def llamarRemove():
-           service_implementation.refreshAuthorization("blas", "b94f9822bfc56656418c1e554f8edf1091444231c538d4d751b6339d87addc05")
-           print("metodo remove ejecutado")
+            service_implementation.addUser("jose", "antonio", "token")
         t=threading.Timer(16.0, llamarRemove)
         t.start()
+
 
     
         

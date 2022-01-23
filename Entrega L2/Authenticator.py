@@ -19,11 +19,11 @@ UB_JSON_USERS = "./usersBD/"
 
 from ServiceAnnounce import ServiceAnnouncements
 from AuthenticatorChannel import Revocations
-
+from AuthenticatorChannel import UserUpdates
 
 class AuthenticatorI(IceFlix.Authenticator):
 
-    def __init__(self, service_announcements_subscriber, prx_service, srv_announce_pub, revocations_subscriber, revocations_publisher):
+    def __init__(self, service_announcements_subscriber, prx_service, srv_announce_pub, userUpdates_subscriber, userUpdates_publisher, revocations_subscriber, revocations_publisher):
         #self._user_updates_subscriber_ = user_updates_subscriber
         self._id_ = str(uuid.uuid4())
         self._service_announcements_subscriber = service_announcements_subscriber
@@ -31,6 +31,9 @@ class AuthenticatorI(IceFlix.Authenticator):
         self._srv_announce_pub = srv_announce_pub
         self._updated = False
         self.announcements = None
+
+        self.userUpdates_subscriber = userUpdates_subscriber
+        self.userUpdates_publisher = userUpdates_publisher
         self.revocations_subscriber = revocations_subscriber
         self.revocations_publisher = revocations_publisher
         
@@ -95,13 +98,14 @@ class AuthenticatorI(IceFlix.Authenticator):
 
         print("diccionario "+str(self.UsersDB.usersToken))
         #A los 2 min revocar token y dar otro
-        revokeToken =threading.Timer(120.0,self.revokeTokenUser, token)
+        revokeToken =threading.Timer(10.0,self.revokeTokenUser, token)
         revokeToken.start()
 
         return token
 
         # except IceFlix.Unauthorized:
         #     print("Usuario no autorizado")
+
     def revokeTokenUser(self,token):
         #eliminar y generar nuevo token
         #newToken = uuid.uuid4().hex
@@ -230,6 +234,7 @@ class AuthenticatorI(IceFlix.Authenticator):
             return
         self.UsersDB = currentDB
         print("Base de datos actualizada desde: " + str(srvId))
+        self.newBD()
         self._updated = True
         self._srv_announce_pub.announce(self._prx_service,self.service_id)
        
@@ -246,30 +251,6 @@ def check_availability(proxies):
     for proxyId in wrong_proxies:
         del proxies[proxyId]
         
-class UserUpdates(IceFlix.UserUpdates):
-    
-    def __init__(self):
-        self.authenticators = {}
-        self.poll_timer = threading.Timer(5.0, self.remote_wrong_proxies) #no ponemos los parentesis a la funcion porque sino cogeria lo que retorna como valor
-    
-    def newUser(self, user,passwordHash, srvId):
-        print("hola")
-        
-    def newToken(self, user, userToken, srvId):
-        print("blas")
-    
-    def remote_wrong_proxies(self):
-        check_availability(self.authenticators)
-        
-        self.poll_timer = threading.Timer(5.0, self.remote_wrong_proxies) #no ponemos los parentesis a la funcion porque sino cogeria lo que retorna como valor
-        self.poll_timer.start()
-
-    def start(self):
-        '''Start current timer'''
-        self.poll_timer.start() #podemos hacer una comprobacion de que ya esta arrancado o parado
-    def stop(self):
-        '''Cancel current timer'''
-        self.poll_timer.cancel()
 
 class ClientAuthentication(Ice.Application):
 
@@ -277,41 +258,63 @@ class ClientAuthentication(Ice.Application):
         adapter = self.communicator().createObjectAdapterWithEndpoints('AuthenticatorService', 'tcp')
         adapter.activate()
         
-        #subscribe to ServiceAnnounce channel
+        #subscribe and publisher to ServiceAnnounce channel
         service_announce_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
         service_announce_subscriber = ServiceAnnouncements("","","")
         service_announce_subscriber_proxy = adapter.addWithUUID(service_announce_subscriber)
         service_announce_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(service_announce_topic.getPublisher())
 
-        #subscribe to Revocations Channel
+        #subscribe and publisher to UsersUpdates Channel
+        userUpdates_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'UserUpdates')
+        userUpdates_subscriber = UserUpdates("", "")
+        userUpdates_subscriber_proxy = adapter.addWithUUID(userUpdates_subscriber)
+        userUpdates_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(userUpdates_topic.getPublisher())
+
+        #subscribe and publisher to Revocations Channel
         revocations_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'Revocations')
-        revocations_subscriber = Revocations()
+        revocations_subscriber = Revocations("", "")
         revocations_subscriber_proxy = adapter.addWithUUID(revocations_subscriber)
         revocations_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(revocations_topic.getPublisher())
 
-        
-        service_implementation = AuthenticatorI(service_announce_subscriber, "", service_announce_publisher, revocations_subscriber, revocations_publisher)
+        service_implementation = AuthenticatorI(service_announce_subscriber, "", service_announce_publisher, userUpdates_subscriber, userUpdates_publisher, revocations_subscriber, revocations_publisher)
         service_proxy = adapter.addWithUUID(service_implementation)
         print(service_proxy, flush=True)
         print(service_implementation.service_id)
         
+        #Asignacion al init de Service Announce
         service_announce_subscriber._service_type = service_proxy.ice_id()
         service_announce_subscriber._service_instance = service_implementation
         service_announce_subscriber._service_proxy = service_proxy
         service_implementation._prx_service = service_proxy
-        
+
         service_announce_topic.subscribeAndGetPublisher({}, service_announce_subscriber_proxy)
+
+
+        #Asignacion al init de UserUpdates
+        userUpdates_subscriber._service_instance = service_implementation
+        userUpdates_subscriber._service_proxy = service_proxy
+
+        userUpdates_topic.subscribeAndGetPublisher({}, userUpdates_subscriber_proxy)
+
+
+        #Asignacion al init de Revocations
+        revocations_subscriber._service_instance = service_implementation
+        revocations_subscriber._service_proxy = service_proxy
+
+        revocations_topic.subscribeAndGetPublisher({}, revocations_subscriber_proxy)
+
+
+        
                 
         service_implementation.initService()
-        #def llamarRemove():
-        #    service_implementation.addUser("we","hola","iceflixadmin")
-        #    print("metodo remove ejecutado")
-        #t=threading.Timer(16.0, llamarRemove)
-        #t.start()
-        #print("remove user ejecutado")
-        #service_implementation.removeUser("ssdd","iceflixadmin")
-        #service_announce_publisher.newService(service_proxy, service_implementation.service_id)
-        #service_announce_publisher.announce(service_proxy, service_implementation.service_id)
+
+
+        def llamarRemove():
+           service_implementation.refreshAuthorization("blas", "b94f9822bfc56656418c1e554f8edf1091444231c538d4d751b6339d87addc05")
+           print("metodo remove ejecutado")
+        t=threading.Timer(16.0, llamarRemove)
+        t.start()
+
     
         
         self.shutdownOnInterrupt()
@@ -325,70 +328,6 @@ class ClientAuthentication(Ice.Application):
         
         service_announce_topic.unsubscribe(service_announce_subscriber_proxy)
         
-        return 0
-
-
-        ##____________________CANAL USER_UPDATES______________##
-        # adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
-        # adapter.activate()
-    
-        # user_updates_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'UserUpdates')
-        # user_updates_subscriber = UserUpdates()
-        # user_updates_subscriber_proxy = adapter.addWithUUID(user_updates_subscriber)
-        # user_updates_topic.subscribeAndGetPublisher({}, user_updates_subscriber_proxy)
-        # user_updates_subscriber.start()
-
-        # service_implementation = AuthenticatorI(user_updates_subscriber)
-        # service_proxy = adapter.addWithUUID(service_implementation)
-        # print(service_proxy, flush=True)
-
-        # user_updates_publisher = IceFlix.UserUpdatesPrx.uncheckedCast(user_updates_topic.getPublisher())
-
-        # ##____________________CANAL SERVICE_ANNOUNCEMENTS______________##
-        # adapter = self.communicator().createObjectAdapterWithEndpoints('Main', 'tcp')
-        # adapter.activate()
-        # qos = {}
-        # service_announcements_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
-        # service_announcements_subscriber = ServiceAnnouncements()
-        # service_announcements_subscriber_proxy = adapter.addWithUUID(service_announcements_subscriber)
-        # service_announcements_topic.subscribeAndGetPublisher({}, service_announcements_subscriber_proxy)
-        # service_announcements_subscriber.start()
-        
-        # print("Waiting events...")
-
-        # service_implementation = AuthenticatorI(service_announcements_subscriber)
-        # service_proxy = adapter.addWithUUID(service_implementation)
-        # print(service_proxy, flush=True)
-
-        # #parte publisher
-
-        # def lanzarNuevoAnnounce():
-        #     discover_publisher.announce(service_proxy,service_implementation.service_id)
-        #     announce = threading.Timer(10.0,lanzarNuevoAnnounce)
-        #     announce.start()
-        #     print("Authenticator anunciandose")
-
-        discover_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
-        discover_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(discover_topic.getPublisher())
-        discover_publisher.announce(service_proxy,service_implementation.service_id)
-
-        # #discover_publisher.announce(service_proxy,service_implementation.service_id)
-
-        # announce = threading.Timer(10.0,lanzarNuevoAnnounce)
-        # announce.start()
-
-
-
-        # ##____________________CANAL REVOCATIONS______________##
-
-
-        self.shutdownOnInterrupt()
-        self.communicator().waitForShutdown()
-        
-
-        user_updates_topic.unsubscribe(user_updates_subscriber_proxy)
-        user_updates_subscriber.stop()
-
         return 0
 
 

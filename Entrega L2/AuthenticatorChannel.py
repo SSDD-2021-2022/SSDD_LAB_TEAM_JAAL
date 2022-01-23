@@ -32,8 +32,17 @@ class Revocations (IceFlix.Revocations):
 
     def revokeToken(self, userToken, srvId, current=None):
         print("Token "+str(userToken)+" de "+str(srvId)+"ha expirado")
-        for userToken in self.UsersDB.usersToken.values():
-            self.UsersDB.usersToken.pop(self.UsersDB.usersToken.pop())
+        token_encontrado = False
+        user = ""
+        
+        for key, value in self.service_instance.UsersDB.usersToken.items():
+            if value == userToken:
+                token_encontrado = True
+                user = key
+                
+        if token_encontrado:
+            self.service_instance.UsersDB.usersToken.pop(user)
+
         return
     
     def revokeUser(self, user, srvId, current=None):

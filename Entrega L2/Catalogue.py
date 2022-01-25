@@ -56,29 +56,6 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         #self.newBD(self)
 
     def newBD(self):
-        global UB_JSON_CATALOG
-        ruta_dir = UB_JSON_CATALOG+"bdCatalog_"+self.service_id
-        # with open(ruta_dir+'/usuariosPeliculas.json','w') as file:
-        #     json.dump(self.UsersDB.userPasswords, file) 
-
-        infoPeliculas = {}
-        for pelicula in self.MediaDBList:
-            infoPeliculas[pelicula.mediaId] = pelicula.name
-            
-        with open(ruta_dir+'/infoPeliculas.json','w') as file:
-            json.dump(infoPeliculas, file) 
-    
-    def updateLastServiceDB(self, usuariosPeliculas):
-        with open('credenciales.json','w') as file:
-            json.dump(usuariosPeliculas, file) 
-    
-    def checkLastInstance(self):
-        dictAuth = self._service_announcements_subscriber.authenticators
-        if(len(dictAuth) == 1 and dictAuth[self._id_]):
-            print("Ultimo servicio en ejecucion, actualizando base de datos de credenciales.json...")
-            self.updateLastServiceDB()
-
-    def updateDBjson(self):
         infoPeliculas = json.loads(open('infoPeliculas.json').read())
         usuariosPeliculas = json.loads(open('usuariosPeliculas.json').read())
 
@@ -96,14 +73,76 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                         dic[user] = tagsUser
                         pelicula.tagsPerUser = dic
             self.MediaDBList.append(pelicula)
-
+        
+    def removeDirR(self):
+        global UB_JSON_CATALOG
         ruta_dir = UB_JSON_CATALOG+"bdCatalog_"+self.service_id
-        with open(ruta_dir+'/infoPeliculas.json','w') as file:
-            json.dump(infoPeliculas, file) 
-        with open(ruta_dir+'/usuariosPeliculas.json','w') as file:
-            json.dump(usuariosPeliculas, file) 
+        rmtree(ruta_dir)
+    
+         
+    
+    def checkLastInstance(self):
+        dictCatalog = self._service_announcements_subscriber.catalogs
+        if(len(dictCatalog) == 1 and dictCatalog[self._id_]):
+            print("Ultimo servicio en ejecucion, actualizando base de datos de credenciales.json...")
+            #self.updateLastServiceDB()
+            return True
+        return False
 
-                            
+    def updateDBjson(self):
+        
+        self.newBD()
+        self.generateJson2DB()
+
+
+    def generateJson2DB(self):
+        ruta_dir = UB_JSON_CATALOG+"bdCatalog_"+self.service_id
+        if(self.checkLastInstance):
+            ruta_dir = "./"
+        infoPeliculas = {}
+        for pelicula in self.MediaDBList:
+            infoPeliculas[pelicula.mediaId] = pelicula.name
+        with open(ruta_dir+'/infoPeliculas.json','w') as file:
+            json.dump(infoPeliculas, file)
+    
+        users = []
+       
+        for infoPel in self.MediaDBList:
+            #listaIds = []
+            #print(infoPel.tagsPerUser.keys())
+            if  infoPel.tagsPerUser is not None:
+                listaUsers = list(infoPel.tagsPerUser.items())
+                
+                for usuario, i in listaUsers:
+                    users.append(usuario)
+
+                users = set(users)
+                users = list(users)
+                #print("lista de usuarios "+str(users))
+
+                #dictUserId[user] = infoPel.mediaId
+        listUsersDef = []         
+        for i in users:
+            dictUserId = {}
+            dictIdTags = {}
+            for infoPel in self.MediaDBList:
+                if  infoPel.tagsPerUser is not None and i in infoPel.tagsPerUser:
+                    dictIdTags[infoPel.mediaId] = infoPel.tagsPerUser.get(i)
+            #print(dictIdTags)
+
+            dictUserId["user"] = i
+            dictUserId["tags"] = dictIdTags
+            listUsersDef.append(dictUserId)
+        
+        
+
+        #print(dictUserId)
+        dictDef = {}    
+        dictDef["users"] = listUsersDef
+        
+        with open(ruta_dir+'/usuariosPeliculas.json','w') as file:
+            json.dump(dictDef, file) 
+
     def getTile(self, mediaId, current=None):
         # try:
         continuar = False
@@ -180,28 +219,41 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
     def addTags(self, mediaId, tag, userToken, current=None):
         # try:
-        user = self.auth_c.whois(userToken)
+        continuar = False
+        auth_c = random.choice(list(self._service_announcements_subscriber.authenticators.values()))
+        user = auth_c.whois(userToken)
         if(user == ""):
             raise IceFlix.Unauthorized
         
-        data=json.loads(open('usuariosPeliculas.json').read())
-        continuar=False
-        for usuario in data["users"]:
-            if usuario["user"] == user:
-                listaTagsUsuario = usuario["tags"]
-                for id_pel, tagsUser in listaTagsUsuario.items():
-                    print(str(id_pel)+" "+str(tagsUser))
-                    if id_pel == mediaId:
-                        continuar=True  
-                        for j in tag:
-                            if(j in tagsUser):
-                                tagsUser.remove(j)
+        for pelicula in self.MediaDBList:
+            if pelicula.mediaId == mediaId:
+                continuar = True
+                newTags = pelicula.userPerTags.get(user)
+                for etiqueta in tag:
+                    if etiqueta not in newTags:
+                        newTags.append(etiqueta)
 
-                            tagsUser.append(j)
-                            print(j)
-                            print(tagsUser)
-        with open('usuariosPeliculas.json', 'w') as data_file:
-            data = json.dump(data, data_file)
+                pelicula.userPerTags[user] = newTags
+                self.generateJson2DB()
+                self.catalogUpdates_publisher.addTags(mediaId, newTags, user, self.service_id)
+        # data=json.loads(open('usuariosPeliculas.json').read())
+        # continuar=False
+        # for usuario in data["users"]:
+        #     if usuario["user"] == user:
+        #         listaTagsUsuario = usuario["tags"]
+        #         for id_pel, tagsUser in listaTagsUsuario.items():
+        #             print(str(id_pel)+" "+str(tagsUser))
+        #             if id_pel == mediaId:
+        #                 continuar=True  
+        #                 for j in tag:
+        #                     if(j in tagsUser):
+        #                         tagsUser.remove(j)
+
+        #                     tagsUser.append(j)
+        #                     print(j)
+        #                     print(tagsUser)
+        # with open('usuariosPeliculas.json', 'w') as data_file:
+        #     data = json.dump(data, data_file)
 
         if(continuar==False):
             raise IceFlix.WrongMediaId
@@ -214,28 +266,42 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         
     def removeTags(self, mediaId, tags, userToken, current=None):
         # try:
-        user = self.auth_c.whois(userToken)
+        auth_c = random.choice(list(self._service_announcements_subscriber.authenticators.values()))
+        continuar=False
+        user = auth_c.whois(userToken)
         if(user == ""):
             raise IceFlix.Unauthorized
-        
-        data = json.loads(open('usuariosPeliculas.json').read())
-        continuar=False
+        for pelicula in self.MediaDBList:
+            if pelicula.mediaId == mediaId:
+                continuar = True
+                newTags = pelicula.userPerTags.get(user)
+                for etiqueta in tags:
+                    if etiqueta in newTags:
+                        newTags.remove(etiqueta)
+                
+                pelicula.userPerTags[user] = newTags
 
-        for usuario in data["users"]:
-            if usuario["user"] == user:
-                listaTagsUsuario = usuario["tags"]
-                for id_pel, tagsUser in listaTagsUsuario.items():
-                    print(str(id_pel)+" "+str(tagsUser))
-                    if id_pel == mediaId:
-                        continuar=True
-                        for tagParametro in tags:
-                            if tagParametro in tagsUser:
-                                tagsUser.remove(tagParametro)
-                                print(str(tagParametro)+" eliminado")
-                                print(tagsUser)
+                self.generateJson2DB()
+                self.catalogUpdates_publisher.removeTags(mediaId, newTags, user, self.service_id)
+        
+        
+        
+
+        # for usuario in data["users"]:
+        #     if usuario["user"] == user:
+        #         listaTagsUsuario = usuario["tags"]
+        #         for id_pel, tagsUser in listaTagsUsuario.items():
+        #             print(str(id_pel)+" "+str(tagsUser))
+        #             if id_pel == mediaId:
+        #                 continuar=True
+        #                 for tagParametro in tags:
+        #                     if tagParametro in tagsUser:
+        #                         tagsUser.remove(tagParametro)
+        #                         print(str(tagParametro)+" eliminado")
+        #                         print(tagsUser)
                                 
-        with open('usuariosPeliculas.json', 'w') as data_file:
-            data = json.dump(data, data_file)
+        # with open('usuariosPeliculas.json', 'w') as data_file:
+        #     data = json.dump(data, data_file)
         if(continuar==False):
             raise IceFlix.WrongMediaId
         # except IceFlix.Unauthorized:
@@ -245,17 +311,21 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
     def renameTile(self, mediaId, name, adminToken, current=None):
         # try:
-        if self.main_c.isAdmin(adminToken):
-            data = json.loads(open('infoPeliculas.json').read())
+        main_c = random.choice(list(self._service_announcements_subscriber.mains.values()))
+        if main_c.isAdmin(adminToken):
             continuar=False
 
-            for ids in data:
-                if ids == mediaId:
-                    continuar=True
-                    data[ids] = name
+            for pelicula in self.MediaDBList:
+                if pelicula.mediaId == mediaId:
+                    continuar = True
+                    pelicula.name = name
+                    self.generateJson2DB()
+                    self.catalogUpdates_publisher.renameTile(mediaId, name, self.service_id)
+            # for ids in data:
+            #     if ids == mediaId:
+            #         continuar=True
+            #         data[ids] = name
     
-            with open('infoPeliculas.json', 'w') as data_file:
-                data = json.dump(data, data_file)
         else:
             raise IceFlix.Unauthorized 
         if(continuar==False):
@@ -296,7 +366,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             return
         self.MediaDBList = catalogDB        
         print("Base de datos actualizada desde: " + str(srvId))
-        self.newBD()
+        self.generateJson2DB()
         self._updated = True
         self._srv_announce_pub.announce(self._prx_service,self.service_id)
 
@@ -357,10 +427,14 @@ class ClientCatalog(Ice.Application):
 
         
         self.shutdownOnInterrupt()
-    
-        self.communicator().waitForShutdown()
 
+        self.communicator().waitForShutdown()
+        if(service_implementation.checkLastInstance()):
+            service_implementation.generateJson2DB()
+        service_implementation.removeDirR()
+        service_implementation.announcements.cancel()
         service_announce_subscriber.poll_timer.cancel()
+
         
         service_announce_topic.unsubscribe(service_announce_subscriber_proxy)
         

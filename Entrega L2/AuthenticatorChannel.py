@@ -17,17 +17,18 @@ class UserUpdates (IceFlix.UserUpdates):
 
     def newUser(self, user, passwordHash, srvId, current=None):
         #actualizamos json
-        self._service_instance.newBD()
+        
 
         if srvId == self._service_instance.service_id:
             return
         else:
             self._service_instance.UsersDB.userPasswords[user] = passwordHash
             print("Usuario "+ user +" añadido.")
+            self._service_instance.newBD()
 
     def newToken(self, user, userToken, srvId, current=None):
         #actualizamos json
-        self._service_instance.newBD()
+        #self._service_instance.newBD()
         
         if srvId == self._service_instance.service_id:
             return
@@ -57,7 +58,7 @@ class Revocations (IceFlix.Revocations):
     
     def revokeUser(self, user, srvId, current=None):
         #actualizamos json
-        self._service_instance.newBD()
+        #self._service_instance.newBD()
 
         if srvId == self._service_instance.service_id:
             return
@@ -70,6 +71,8 @@ class Revocations (IceFlix.Revocations):
                     
             if user_encontrado:
                 self._service_instance.UsersDB.usersToken.pop(user)
+                #se pone aqui actualizar el json propio de cada service --> lo hacen todos los service menos el emisor del evento
+                self._service_instance.newBD()
             print("Usuario "+ user +" eliminado.")
         
     

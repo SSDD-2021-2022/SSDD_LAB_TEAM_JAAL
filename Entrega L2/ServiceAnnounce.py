@@ -75,11 +75,11 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
     
     def remote_wrong_proxies(self):
         check_availability(self.authenticators)
-        #check_availability(self.catalogs)
+        check_availability(self.catalogs)
         check_availability(self.mains)
         if self._service_proxy.ice_isA('::IceFlix::Main'):
             self._service_instance.check_volatile_services(self._service_instance.VolatileServices.authenticators)
-            #self._service_instance.check_volatile_services(self._service_instance.VolatileServices.mediaCatalogs)
+            self._service_instance.check_volatile_services(self._service_instance.VolatileServices.mediaCatalogs)
 
         
         self.poll_timer = threading.Timer(5.0, self.remote_wrong_proxies) #no ponemos los parentesis a la funcion porque sino cogeria lo que retorna como valor

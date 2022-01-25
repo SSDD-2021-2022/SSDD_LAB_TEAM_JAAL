@@ -12,7 +12,6 @@ class CatalogUpdates (IceFlix.CatalogUpdates):
         self._service_proxy = service_proxy
 
     def renameTile(self, mediaId, name, srvId, current=None):
-        
         if srvId == self._service_instance.service_id:
             return
         print("El srv "+srvId+" ha renombrado el id"+mediaId+" con el nombre "+name)
@@ -22,25 +21,24 @@ class CatalogUpdates (IceFlix.CatalogUpdates):
                 self._service_instance.generateJson2DB()
 
 
-    def addTags(self, mediaId, tags, user, srvId, current=None):
-        
+    def addTags(self, mediaId, tags, user, srvId, current=None): 
         if srvId == self._service_instance.service_id:
             return
-        print("El srv "+srvId+" ha añadido los tags "+str(tags)+"para el usuario "+user)
-        for pelicula in self.MediaDBList:
+        print("El srv "+srvId+" ha añadido los tags para el usuario "+user)
+        for pelicula in self._service_instance.MediaDBList:
             if pelicula.mediaId == mediaId:
-                pelicula.userPerTags[user] = tags
+                pelicula.tagsPerUser[user] = tags
                 self._service_instance.generateJson2DB()
         
     def removeTags(self, mediaId, tags,  user, srvId, current=None):
         if srvId == self._service_instance.service_id:
             return
-        print("El srv "+srvId+" ha eliminado los tags "+str(tags)+"para el usuario "+user)
+        print("El srv "+srvId+" ha eliminado los tags para el usuario "+user)
         if srvId == self._service_instance.service_id:
             return
-        for pelicula in self.MediaDBList:
+        for pelicula in self._service_instance.MediaDBList:
             if pelicula.mediaId == mediaId:
-                pelicula.userPerTags[user] = tags
+                pelicula.tagsPerUser[user] = tags
                 self._service_instance.generateJson2DB()
 
 

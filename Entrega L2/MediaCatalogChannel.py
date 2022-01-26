@@ -18,17 +18,24 @@ class CatalogUpdates (IceFlix.CatalogUpdates):
         for pelicula in self._service_instance.MediaDBList:
             if pelicula.mediaId == mediaId:
                 pelicula.name = name
-                self._service_instance.generateJson2DB()
+                self._service_instance.generateJson2DB(self._service_instance.ruta)
 
 
     def addTags(self, mediaId, tags, user, srvId, current=None): 
         if srvId == self._service_instance.service_id:
             return
         print("El srv "+srvId+" ha añadido los tags para el usuario "+user)
+        print(tags)
+        dic = {}
         for pelicula in self._service_instance.MediaDBList:
             if pelicula.mediaId == mediaId:
-                pelicula.tagsPerUser[user] = tags
-                self._service_instance.generateJson2DB()
+                if pelicula.tagsPerUser is not None and user in pelicula.tagsPerUser.keys():
+                    pelicula.tagsPerUser[user] = tags
+                else:
+                    dic[user] = tags
+                    pelicula.tagsPerUser = dic
+
+                self._service_instance.generateJson2DB(self._service_instance.ruta)
         
     def removeTags(self, mediaId, tags,  user, srvId, current=None):
         if srvId == self._service_instance.service_id:
@@ -39,7 +46,7 @@ class CatalogUpdates (IceFlix.CatalogUpdates):
         for pelicula in self._service_instance.MediaDBList:
             if pelicula.mediaId == mediaId:
                 pelicula.tagsPerUser[user] = tags
-                self._service_instance.generateJson2DB()
+                self._service_instance.generateJson2DB(self._service_instance.ruta)
 
 
     

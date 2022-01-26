@@ -51,11 +51,11 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
     def announce(self, service, srvId, current=None):  # pylint: disable=unused-argument
         """Check service type and add it."""
         if srvId in self.known_services:
-            print(f'Service {srvId} announcingself')
-            print("*************************************")
-            print("Known Services")
-            print(self.known_services)
-            print("*************************************")
+            # print(f'Service {srvId} announcingself')
+            # print("*************************************")
+            # print("Known Services")
+            # print(self.known_services)
+            # print("*************************************")
             return
         if service.ice_isA('::IceFlix::Authenticator'):
             print(f'New AuthenticatorService running: {srvId}')

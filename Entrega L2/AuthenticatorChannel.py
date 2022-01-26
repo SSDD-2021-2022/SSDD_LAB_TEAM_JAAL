@@ -45,16 +45,20 @@ class Revocations (IceFlix.Revocations):
 
     def revokeToken(self, userToken, srvId, current=None):
         print("Token "+str(userToken)+" de "+str(srvId)+" ha expirado")
+
+        if srvId == self._service_instance.service_id or self._service_proxy.ice_isA("::IceFlix::MediaCatalog"):
+            return
+        
         token_encontrado = False
         user = ""
-        
         for key, value in self._service_instance.UsersDB.usersToken.items():
             if value == userToken:
                 token_encontrado = True
                 user = key
                 
         if token_encontrado:
-            self._service_instance.UsersDB.usersToken.pop(user)
+            self._service_instance.UsersDB.usersToken[user] = ""
+            #self._service_instance.UsersDB.usersToken.pop(user)
     
     def revokeUser(self, user, srvId, current=None):
         #actualizamos json
@@ -62,7 +66,18 @@ class Revocations (IceFlix.Revocations):
 
         if srvId == self._service_instance.service_id:
             return
-        else:
+
+        if self._service_proxy.ice_isA("::IceFlix::MediaCatalog"):
+            continuar = False 
+            for pelicula in self._service_instance.MediaDBList:
+                if pelicula.tagsPerUser is not None and user in pelicula.tagsPerUser.keys():
+                    continuar = True
+                    pelicula.tagsPerUser.pop(user)
+            if continuar:
+                print("Tags del usuario "+ user +" eliminado.")
+                self._service_instance.generateJson2DB(self._service_instance.ruta)
+                             
+        else: 
             user_encontrado = False
         
             for key, value in self._service_instance.UsersDB.userPasswords.items():
@@ -70,7 +85,7 @@ class Revocations (IceFlix.Revocations):
                     user_encontrado = True
                     
             if user_encontrado:
-                self._service_instance.UsersDB.usersToken.pop(user)
+                self._service_instance.UsersDB.userPasswords.pop(user)
                 #se pone aqui actualizar el json propio de cada service --> lo hacen todos los service menos el emisor del evento
                 self._service_instance.newBD()
             print("Usuario "+ user +" eliminado.")

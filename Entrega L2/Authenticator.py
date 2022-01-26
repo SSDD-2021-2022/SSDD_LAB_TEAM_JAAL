@@ -21,8 +21,7 @@ from ServiceAnnounce import ServiceAnnouncements
 from AuthenticatorChannel import Revocations
 from AuthenticatorChannel import UserUpdates
 
-aux_token=""
-aux_user=""
+
 
 class AuthenticatorI(IceFlix.Authenticator):
 
@@ -34,6 +33,7 @@ class AuthenticatorI(IceFlix.Authenticator):
         self._srv_announce_pub = srv_announce_pub
         self._updated = False
         self.announcements = None
+        self.user = ""
 
         self.userUpdates_subscriber = userUpdates_subscriber
         self.userUpdates_publisher = userUpdates_publisher
@@ -83,7 +83,7 @@ class AuthenticatorI(IceFlix.Authenticator):
         ruta_dir = UB_JSON_USERS+"bdUser_"+self.service_id
         rmtree(ruta_dir)
 
-    def refreshAuthorization(self,user, passwordHash, current=None):
+    def refreshAuthorization(self, user, passwordHash, current=None):
         # try: 
         
 
@@ -102,14 +102,10 @@ class AuthenticatorI(IceFlix.Authenticator):
             self.userUpdates_publisher.newToken(user, token, self.service_id)
 
         print("diccionario "+str(self.UsersDB.usersToken))
-        global aux_token 
-        aux_token = token
-
-        global aux_user
-        aux_user = user
-
+       
+        self.user = user
         #A los 2 min revocar token y dar otro
-        revokeToken = threading.Timer(15.0, self.revokeTokenUser)
+        revokeToken = threading.Timer(120000.0, self.revokeTokenUser)
         revokeToken.start()
         #self.revokeTokenUser(token)
         
@@ -119,11 +115,9 @@ class AuthenticatorI(IceFlix.Authenticator):
         #     print("Usuario no autorizado")
 
     def revokeTokenUser(self):
-        global aux_user
-        global aux_token
+        self.revocations_publisher.revokeToken(self.UsersDB.usersToken.get(self.user), self.service_id)
         #eliminamos el token y mandamos notificacion al canal
-        self.UsersDB.usersToken.pop(aux_user)
-        self.revocations_publisher.revokeToken(aux_token, self.service_id)
+        self.UsersDB.usersToken[self.user] = ""
             
     def isAuthorized(self, userToken, current = None):
         isAuth = False
@@ -137,7 +131,6 @@ class AuthenticatorI(IceFlix.Authenticator):
         user = ""
         # try:
         for key, value in self.UsersDB.usersToken.items():
-            print(key, value)
             if userToken == value:
                 user = key
 

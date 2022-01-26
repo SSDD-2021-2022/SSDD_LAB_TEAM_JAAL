@@ -46,12 +46,13 @@ class Client(Ice.Application):
             
                 mostrarMenuC = True
                 while(mostrarMenuC):
-                    idPelicula = input("Introduce id de la película\n")
-                    media = main.getCatalog()
-                    print(media.getTile(idPelicula, userToken).info.name)
 
-                    opcion_catalogo = input("Elija si quiere hacer alguna gestión de catálogo o prefiere salir.\n1. Obtener título por tags\n2. Añadir tags a un determinado medio\n3. Borrar tags\n4. Volver al menú\n")
-                    if(opcion_catalogo == "1"):
+                    opcion_catalogo = input("Elija si quiere hacer alguna gestión de catálogo o prefiere salir.\n1. Obtener título por id\n2. Obtener título por tags\n3. Añadir tags a un determinado medio\n4. Borrar tags\n5. Volver al menú\n")
+                    if opcion_catalogo == "1":
+                        idPelicula = input("Introduce id de la película\n")
+                        media = main.getCatalog()
+                        print(media.getTile(idPelicula, userToken).info.name)
+                    elif(opcion_catalogo == "2"):
                         tags = input("Introduzca las tags que quiera buscar separandolas por el caracter ','\n")
                         listaTags = tags.split(",")
                         todosTags = False
@@ -60,18 +61,19 @@ class Client(Ice.Application):
                             todosTags = True
                         print(main.getCatalog().getTilesByTags(listaTags, todosTags, userToken))
 
-                    elif(opcion_catalogo == "2"):
+                    elif(opcion_catalogo == "3"):
                         id = input("Introduzca id del medio al que quiera añadir las tags\n")
                         tags = input("Introduzca las tags que quiera añadir separandolas por el caracter ','\n")
                         listaTags = tags.split(",")
 
                         main.getCatalog().addTags(id, listaTags, userToken)
                         
-                    elif(opcion_catalogo == "3"):
+                    elif(opcion_catalogo == "4"):
                         id = input("Introduzca id del medio al que quiera borrar las tags\n")
                         tags = input("Introduzca las tags que quiera borrar separandolas por el caracter ','\n")
                         listaTags = tags.split(",")
                         main.getCatalog().removeTags(id, listaTags, userToken)
+                    
 
                     else:
                         mostrarMenuC = False
@@ -98,12 +100,12 @@ class Client(Ice.Application):
                     name = input("Introduzca el nuevo nombre que le quiera dar al título del medio\n")
                     main.getCatalog().renameTile(id,name,tokenAdmin)
             elif(conectar_opcion == "4"):
-                opcion_catalogo = input("¿Qué búsqueda quiere hacer?\n1. Búsqueda por id\n2. Búsqueda por nombre\n")
+                opcion_catalogo = input("¿Qué búsqueda quiere hacer?\n1. Búsqueda por nombre\n")
+                # if(opcion_catalogo == "1"):
+                #     idPelicula = input("Introduce id de la película\n")
+                #     media = main.getCatalog()
+                #     print(media.getTile(idPelicula, userToken).info.name)
                 if(opcion_catalogo == "1"):
-                    idPelicula = input("Introduce id de la película\n")
-                    media = main.getCatalog()
-                    print(media.getTile(idPelicula, userToken).info.name)
-                if(opcion_catalogo == "2"):
                     nombrePelicula = input("Introduce nombre de la película\n")
                     todosIDUser = input("Desea sacar los id que contengan esa cadena (1) o sacar sólo los que específicamente tienen esa cadena (2)\n")
                     todosId = False

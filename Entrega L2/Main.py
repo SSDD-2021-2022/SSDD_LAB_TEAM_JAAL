@@ -56,7 +56,6 @@ class MainI(IceFlix.Main):
 
     def register(self, service, srvId):
         # try:
-        print("soy " + str(service.ice_id()))
         if(service.ice_isA("::IceFlix::Authenticator")):
             self.VolatileServices.authenticators.append(IceFlix.AuthenticatorPrx.uncheckedCast(service))
         elif(service.ice_isA("::IceFlix::MediaCatalog")):
@@ -163,7 +162,7 @@ class MainI(IceFlix.Main):
         for srv_prx in wrong_proxies:
             volatile_services.remove(srv_prx)
     
-        print("VOLATILE SERVICES AUTH " + str(volatile_services))
+        #print("VOLATILE SERVICES AUTH " + str(volatile_services))
 
 class ServerMain(Ice.Application):
     

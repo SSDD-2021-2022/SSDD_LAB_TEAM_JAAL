@@ -14,13 +14,14 @@ Ice.loadSlice('iceflix.ice')
 import IceFlix
 from ServiceAnnounce import ServiceAnnouncements
 from MediaCatalogChannel import CatalogUpdates
+from AuthenticatorChannel import Revocations
 EXIT_ERROR=1
 
 UB_JSON_CATALOG = "./catalogBD/"
 
 class MediaCatalogI(IceFlix.MediaCatalog):
     
-    def __init__(self, service_announcements_subscriber, prx_service, srv_announce_pub, catalogUpdates_subscriber, catalogUpdates_publisher):
+    def __init__(self, service_announcements_subscriber, prx_service, srv_announce_pub, catalogUpdates_subscriber, catalogUpdates_publisher, catalogRevocations_subscriber):
         self._id_ = str(uuid.uuid4())
         self._service_announcements_subscriber = service_announcements_subscriber
         self._prx_service = prx_service
@@ -30,6 +31,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         self.catalogUpdates_subscriber = catalogUpdates_subscriber
         self.catalogUpdates_publisher = catalogUpdates_publisher
+        self.catalogRevocations_subscriber = catalogRevocations_subscriber
 
         MediaId = ""
         Name = ""
@@ -201,13 +203,20 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         continuar = False
         auth_c = random.choice(list(self._service_announcements_subscriber.authenticators.values()))
         user = auth_c.whois(userToken)
+        dic = {}
+        newTags = []
         if(user == ""):
             raise IceFlix.Unauthorized
         
         for pelicula in self.MediaDBList:
             if pelicula.mediaId == mediaId:
                 continuar = True
-                newTags = pelicula.tagsPerUser.get(user)
+                
+                if pelicula.tagsPerUser is not None and user in pelicula.tagsPerUser.keys():
+                    newTags = pelicula.tagsPerUser.get(user)
+                else:
+                    dic[user] = newTags
+                    pelicula.tagsPerUser = dic
                 for etiqueta in tag:
                     if etiqueta not in newTags:
                         newTags.append(etiqueta)
@@ -325,7 +334,13 @@ class ClientCatalog(Ice.Application):
         catalogUpdates_subscriber_proxy = adapter.addWithUUID(catalogUpdates_subscriber)
         catalogUpdates_publisher = IceFlix.CatalogUpdatesPrx.uncheckedCast(catalogUpdates_topic.getPublisher())
 
-        service_implementation = MediaCatalogI(service_announce_subscriber, "", service_announce_publisher, catalogUpdates_subscriber, catalogUpdates_publisher)
+        #subscribe and publisher to Revocations Channel
+        catalogRevocations_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'Revocations')
+        catalogRevocations_subscriber = Revocations("", "")
+        catalogRevocations_subscriber_proxy = adapter.addWithUUID(catalogRevocations_subscriber)
+        #catalogURevocations_publisher = IceFlix.RevocationsPrx.uncheckedCast(catalogRevocations_topic.getPublisher())
+
+        service_implementation = MediaCatalogI(service_announce_subscriber, "", service_announce_publisher, catalogUpdates_subscriber, catalogUpdates_publisher, catalogRevocations_subscriber)
         service_proxy = adapter.addWithUUID(service_implementation)
         print(service_proxy, flush=True)
         print(service_implementation.service_id)
@@ -343,6 +358,12 @@ class ClientCatalog(Ice.Application):
         catalogUpdates_subscriber._service_proxy = service_proxy
 
         catalogUpdates_topic.subscribeAndGetPublisher({}, catalogUpdates_subscriber_proxy)
+
+        #Asignacion al init de Revocations
+        catalogRevocations_subscriber._service_instance = service_implementation
+        catalogRevocations_subscriber._service_proxy = service_proxy
+
+        catalogRevocations_topic.subscribeAndGetPublisher({}, catalogRevocations_subscriber_proxy)
 
         
         service_implementation.initService()

@@ -15,8 +15,6 @@ import IceFlix
 EXIT_OK = 0
 EXIT_ERROR = 1
 
-
-
 class Client(Ice.Application):
 
     def run(self, args):
@@ -24,8 +22,6 @@ class Client(Ice.Application):
         conectado = False
         auth = ""
         salir = 0
-
-
 
         while(salir == 0):
             print("Menú del programa\n1. Conectar\n2. Autenticar\n3. Opciones de administración\n4. Opciones de catálogo sin autenticación\n")
@@ -39,8 +35,6 @@ class Client(Ice.Application):
                 print("Se ha conectado")
                 conectado = True
 
-				
-
             elif(conectado and conectar_opcion == "2"):
                 user = input("Introduce usuario:\n")
                 password = getpass.getpass("Introduzca contraseña:\n")
@@ -52,6 +46,9 @@ class Client(Ice.Application):
             
                 mostrarMenuC = True
                 while(mostrarMenuC):
+                    idPelicula = input("Introduce id de la película\n")
+                    media = main.getCatalog()
+                    print(media.getTile(idPelicula, userToken).info.name)
 
                     opcion_catalogo = input("Elija si quiere hacer alguna gestión de catálogo o prefiere salir.\n1. Obtener título por tags\n2. Añadir tags a un determinado medio\n3. Borrar tags\n4. Volver al menú\n")
                     if(opcion_catalogo == "1"):

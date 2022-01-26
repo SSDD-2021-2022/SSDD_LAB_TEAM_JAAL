@@ -21,6 +21,9 @@ from ServiceAnnounce import ServiceAnnouncements
 from AuthenticatorChannel import Revocations
 from AuthenticatorChannel import UserUpdates
 
+aux_token=""
+aux_user=""
+
 class AuthenticatorI(IceFlix.Authenticator):
 
     def __init__(self, service_announcements_subscriber, prx_service, srv_announce_pub, userUpdates_subscriber, userUpdates_publisher, revocations_subscriber, revocations_publisher):
@@ -82,6 +85,7 @@ class AuthenticatorI(IceFlix.Authenticator):
 
     def refreshAuthorization(self,user, passwordHash, current=None):
         # try: 
+        
 
         for key, value in self.UsersDB.userPasswords.items():
             userJSON = key
@@ -98,21 +102,28 @@ class AuthenticatorI(IceFlix.Authenticator):
             self.userUpdates_publisher.newToken(user, token, self.service_id)
 
         print("diccionario "+str(self.UsersDB.usersToken))
+        global aux_token 
+        aux_token = token
+
+        global aux_user
+        aux_user = user
 
         #A los 2 min revocar token y dar otro
-        revokeToken = threading.Timer(120.0, self.revokeTokenUser(user, token))
+        revokeToken = threading.Timer(15.0, self.revokeTokenUser)
         revokeToken.start()
         #self.revokeTokenUser(token)
-
+        
         return token
 
         # except IceFlix.Unauthorized:
         #     print("Usuario no autorizado")
 
-    def revokeTokenUser(self,user, token):
+    def revokeTokenUser(self):
+        global aux_user
+        global aux_token
         #eliminamos el token y mandamos notificacion al canal
-        self.UsersDB.usersToken.pop(user)
-        self.revocations_publisher.revokeToken(token, self.service_id)
+        self.UsersDB.usersToken.pop(aux_user)
+        self.revocations_publisher.revokeToken(aux_token, self.service_id)
             
     def isAuthorized(self, userToken, current = None):
         isAuth = False
@@ -126,6 +137,7 @@ class AuthenticatorI(IceFlix.Authenticator):
         user = ""
         # try:
         for key, value in self.UsersDB.usersToken.items():
+            print(key, value)
             if userToken == value:
                 user = key
 

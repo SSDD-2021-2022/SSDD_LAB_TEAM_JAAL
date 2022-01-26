@@ -128,7 +128,9 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             
     def getTile(self, mediaId, userToken, current=None):
         continuar = False
-        user = self.auth_c.whois(userToken)
+        auth_c = random.choice(list(self._service_announcements_subscriber.authenticators.values()))
+
+        user = auth_c.whois(userToken)
 
         if(user == ""):
             raise IceFlix.Unauthorized
@@ -166,8 +168,9 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
     def getTilesByTags(self, tags, allTags, userToken, current=None):
         idAT = []
-        
-        user = self.auth_c.whois(userToken)
+
+        auth_c = random.choice(list(self._service_announcements_subscriber.authenticators.values()))
+        user = auth_c.whois(userToken)
 
         if(user == ""):
             raise IceFlix.Unauthorized

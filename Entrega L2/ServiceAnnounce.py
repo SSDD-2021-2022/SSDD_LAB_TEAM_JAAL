@@ -65,6 +65,8 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
         elif service.ice_isA('::IceFlix::MediaCatalog'):
             print(f'New MediaCatalogService running: {srvId}')
             self.catalogs[srvId] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
+            if self._service_proxy.ice_isA('::IceFlix::Main'):
+                self._service_instance.register(service, srvId)
 
         elif service.ice_isA('::IceFlix::Main'):
              print(f'New MainService running: {srvId}')

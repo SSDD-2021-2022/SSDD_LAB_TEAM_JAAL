@@ -126,9 +126,13 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         with open(ruta_dir+'/usuariosPeliculas.json','w') as file:
             json.dump(dictDef, file)
             
-    def getTile(self, mediaId, current=None):
+    def getTile(self, mediaId, userToken, current=None):
         continuar = False
-        
+        user = self.auth_c.whois(userToken)
+
+        if(user == ""):
+            raise IceFlix.Unauthorized
+            
         media = IceFlix.Media()
         mediaInfo = IceFlix.MediaInfo()
         
@@ -162,7 +166,6 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
     def getTilesByTags(self, tags, allTags, userToken, current=None):
         idAT = []
-        id = []
         
         user = self.auth_c.whois(userToken)
 
@@ -255,7 +258,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
     def initService(self):
         print("Inicio de servicios")
-        self._srv_announce_pub.newService(self._prx_service,self.service_id)
+        self._srv_announce_pub.newService(self._prx_service, self.service_id)
         self.announcements = threading.Timer(3.0, self.serviceAnnouncing)
         self.announcements.start()
 
@@ -265,9 +268,9 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             self.updateDBjson()
             self._updated = True
 
-        self._srv_announce_pub.announce(self._prx_service,self.service_id)
+        self._srv_announce_pub.announce(self._prx_service, self.service_id)
         time = 10 + random.uniform(-2,2)
-        self.announcements = threading.Timer(time,self.serviceAnnouncing)
+        self.announcements = threading.Timer(time, self.serviceAnnouncing)
         self.announcements.start()
     
     def getDB(self):
@@ -340,11 +343,11 @@ class ClientCatalog(Ice.Application):
 
         
         service_implementation.initService()
-        list = ["terror", "romance", "comedia", "accion"]
-        def llamarRemove():
-            print(service_implementation.getTilesByTags(list, True, "sda"))
-        t=threading.Timer(4.0, llamarRemove)
-        t.start()
+        # list = ["terror", "romance", "comedia", "accion"]
+        # def llamarRemove():
+        #     print(service_implementation.getTilesByTags(list, True, "sda"))
+        # t=threading.Timer(4.0, llamarRemove)
+        # t.start()
         
         self.shutdownOnInterrupt()
         self.communicator().waitForShutdown()

@@ -56,11 +56,12 @@ class MainI(IceFlix.Main):
 
     def register(self, service, srvId):
         # try:
+        print("soy " + str(service.ice_id()))
         if(service.ice_isA("::IceFlix::Authenticator")):
             self.VolatileServices.authenticators.append(IceFlix.AuthenticatorPrx.uncheckedCast(service))
         elif(service.ice_isA("::IceFlix::MediaCatalog")):
-            self.VolatileServices.mediaCatalogs.apeend(IceFlix.MediaCatalogPrx.uncheckedCast(service))
-            print(self.VolatileServices.mediaCatalogs)
+            self.VolatileServices.mediaCatalogs.append(IceFlix.MediaCatalogPrx.uncheckedCast(service))
+            #print(self.VolatileServices.mediaCatalogs)
         else:
             raise IceFlix.UnknownService
                 
@@ -69,17 +70,17 @@ class MainI(IceFlix.Main):
 
     def getAuthenticator(self, current=None):
         
-        if(not self.listaObjAuth):
+        if(not self.VolatileServices.authenticators):
             raise IceFlix.TemporaryUnavailable
             
-        proxyAuth = random.choice(self.listaObjAuth)
+        proxyAuth = random.choice(self.VolatileServices.authenticators)
         print(proxyAuth)
         try:
             proxyAuth.ice_ping()
 
         except Ice.ConnectionRefusedException:
             print("proxy inexistente")
-            self.listaObjAuth.remove(proxyAuth) 
+            self.VolatileServices.authenticators.remove(proxyAuth) 
             raise IceFlix.TemporaryUnavailable
          
         return IceFlix.AuthenticatorPrx.uncheckedCast(proxyAuth)
@@ -87,17 +88,17 @@ class MainI(IceFlix.Main):
    
     def getCatalog(self, current=None):
 
-        if(not self.listaObjCtg):
+        if(not self.VolatileServices.mediaCatalogs):
             raise IceFlix.TemporaryUnavailable
             
-        proxyCtg = random.choice(self.listaObjCtg)
+        proxyCtg = random.choice(self.VolatileServices.mediaCatalogs)
         print(proxyCtg)
         try:
             proxyCtg.ice_ping()
 
         except Ice.ConnectionRefusedException:
             print("proxy inexistente")
-            self.listaObjCtg.remove(proxyCtg) 
+            self.VolatileServices.mediaCatalogs.remove(proxyCtg) 
             raise IceFlix.TemporaryUnavailable
             
         return IceFlix.MediaCatalogPrx.uncheckedCast(proxyCtg)

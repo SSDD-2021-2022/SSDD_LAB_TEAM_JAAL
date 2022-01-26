@@ -100,7 +100,7 @@ class AuthenticatorI(IceFlix.Authenticator):
         print("diccionario "+str(self.UsersDB.usersToken))
 
         #A los 2 min revocar token y dar otro
-        revokeToken = threading.Timer(120.0, self.revokeTokenUser(token))
+        revokeToken = threading.Timer(120.0, self.revokeTokenUser(user, token))
         revokeToken.start()
         #self.revokeTokenUser(token)
 
@@ -109,11 +109,9 @@ class AuthenticatorI(IceFlix.Authenticator):
         # except IceFlix.Unauthorized:
         #     print("Usuario no autorizado")
 
-    def revokeTokenUser(self,token):
-        #eliminar y generar nuevo token
-        #newToken = uuid.uuid4().hex
-        #self.UsersDB.usersToken[user] = token
-        
+    def revokeTokenUser(self,user, token):
+        #eliminamos el token y mandamos notificacion al canal
+        self.UsersDB.usersToken.pop(user)
         self.revocations_publisher.revokeToken(token, self.service_id)
             
     def isAuthorized(self, userToken, current = None):
@@ -193,7 +191,7 @@ class AuthenticatorI(IceFlix.Authenticator):
 
     def initService(self):
         print("Inicio de servicios")
-        self._srv_announce_pub.newService(self._prx_service,self.service_id)
+        self._srv_announce_pub.newService(self._prx_service, self.service_id)
         self.announcements = threading.Timer(3.0, self.serviceAnnouncing)
         self.announcements.start()
 

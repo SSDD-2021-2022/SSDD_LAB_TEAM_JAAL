@@ -33,7 +33,7 @@ class AuthenticatorI(IceFlix.Authenticator):
         self._srv_announce_pub = srv_announce_pub
         self._updated = False
         self.announcements = None
-        self.user = ""
+        self.usersTok = []
 
         self.userUpdates_subscriber = userUpdates_subscriber
         self.userUpdates_publisher = userUpdates_publisher
@@ -88,9 +88,9 @@ class AuthenticatorI(IceFlix.Authenticator):
         token = ""
         revokeToken = ""
 
-        # if self.user == user:
-        #     print("Mismo usuario refrescando Token")
-        #     revokeToken.cancel()
+        if len(self.UsersDB.usersToken) != 0 and user in self.UsersDB.usersToken:
+            print("buenas tardes")
+            return
 
         for key, value in self.UsersDB.userPasswords.items():
             userJSON = key
@@ -108,9 +108,9 @@ class AuthenticatorI(IceFlix.Authenticator):
 
         print("diccionario "+str(self.UsersDB.usersToken))
        
-        self.user = user
+        self.usersTok.append(user)
         #A los 2 min revocar token y dar otro
-        revokeToken = threading.Timer(12.0, self.revokeTokenUser)
+        revokeToken = threading.Timer(30, self.revokeTokenUser)
         revokeToken.start()
         #self.revokeTokenUser(token)
         
@@ -120,10 +120,12 @@ class AuthenticatorI(IceFlix.Authenticator):
         #     print("Usuario no autorizado")
 
     def revokeTokenUser(self):
-        self.revocations_publisher.revokeToken(self.UsersDB.usersToken.get(self.user), self.service_id)
+        user = self.usersTok.pop(0)
+        self.revocations_publisher.revokeToken(self.UsersDB.usersToken.get(user), self.service_id)
         #eliminamos el token y mandamos notificacion al canal
-        self.UsersDB.usersToken[self.user] = ""
-        self.refreshAuthorization(self.user, self.UsersDB.userPasswords.get(self.user))
+        self.UsersDB.usersToken.pop(user)
+        print("ha expirado el token del usuario " + user)
+        #self.refreshAuthorization(self.user, self.UsersDB.userPasswords.get(self.user))
 
             
     def isAuthorized(self, userToken, current = None):

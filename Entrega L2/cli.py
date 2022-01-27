@@ -7,6 +7,7 @@ import random
 import threading
 import Ice
 import getpass
+import time
 import hashlib
 import topics
 Ice.loadSlice('iceflix.ice')
@@ -21,49 +22,73 @@ class Client(Ice.Application):
     def __init__(self, current=None):
         self.auth = ""
         self.catalog = ""
+        self.conectado = False
+        self.check = 3
+        self.salir = 0
+        self.userTok = []
+        self.passTok = []
+        self.valid = True
+        self.cont = -1
 
 
 
     def checkPrxMain(self, current = None):
-        check = 3
-        proxyMain = input("Introduzca el proxy del Main para realizar la conexión\n")
-        proxy = self.communicator().stringToProxy(proxyMain)
+        
+        if(self.check != 0):
+            self.check = self.check - 1
+            try:
+                proxyMain = input("Introduzca el proxy del Main para realizar la conexión\n")
+                proxy = self.communicator().stringToProxy(proxyMain)
+                if proxy.ice_isA('::IceFlix::Main'):
+                    
+                    main = IceFlix.MainPrx.checkedCast(proxy)
+                    print("proxy correcto")
+                    print("Se ha conectado")
+                    self.conectado = True
+                    return main
+            except Ice.Exception as error:
+                print("proxy erroneo")
+                print(error)
+                time.sleep(5)
+        else:
+            print("Demasiados intentos de conexión")
+            self.salir = 1
+    
+    def renovarTokenUser(self, current = None):
+        if self.valid:
+            #print("Vergostulis")
+            self.auth.refreshAuthorization(self.userTok[self.cont], self.passTok[self.cont])
+            renovarToken = threading.Timer(30, self.renovarTokenUser)
+            renovarToken.start()
 
 
-        try:
-            if proxy.ice_isA('::IceFlix::Main') == False:
-                raise IceFlix.TemporaryUnavailable
-            print("proxy correcto")
-            main = IceFlix.MainPrx.checkedCast(proxy)
-            self.auth = main.getAuthenticator()
-            return main
-        except IceFlix.TemporaryUnavailable:
-            print("proxy erroneo")
+            
 
 
     def run(self, args):
 
-        conectado = False
-        auth = ""
-        salir = 0
-
-        while(salir == 0):
+        while(self.salir == 0):
             print("Menú del programa\n1. Conectar\n2. Autenticar\n3. Opciones de administración\n4. Opciones de catálogo sin autenticación\n")
             conectar_opcion = input()
         
             if conectar_opcion == "1":
 
                 main = self.checkPrxMain()
-                print("Se ha conectado")
-                conectado = True
 
-            elif(conectado and conectar_opcion == "2"):
+
+            elif(self.conectado and conectar_opcion == "2"):
                 user = input("Introduce usuario:\n")
                 password = getpass.getpass("Introduzca contraseña:\n")
                 passSha = hashlib.sha256(password.encode()).hexdigest()
                 userToken = ""
                 
-                userToken = main.getAuthenticator().refreshAuthorization(user, passSha)
+                self.auth = main.getAuthenticator()
+                userToken = self.auth.refreshAuthorization(user, passSha)
+                self.userTok.append(user)
+                self.passTok.append(passSha)
+                self.cont = self.cont + 1
+                renovarToken = threading.Timer(31, self.renovarTokenUser)
+                renovarToken.start()
                 print(userToken)
             
                 mostrarMenuC = True
@@ -98,6 +123,7 @@ class Client(Ice.Application):
                     
 
                     else:
+                        #self.valid = False
                         mostrarMenuC = False
                 
 
@@ -136,7 +162,7 @@ class Client(Ice.Application):
                     print(str(main.getCatalog().getTilesByName(nombrePelicula, todosId)))
             else:
                 print("Saliendo...")
-                salir = 1
+                self.salir = 1
             
 
 if __name__ == '__main__':

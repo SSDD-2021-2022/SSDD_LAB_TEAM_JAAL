@@ -32,8 +32,9 @@ class UserUpdates (IceFlix.UserUpdates):
         
         if srvId == self._service_instance.service_id:
             return
-        else:
-            self._service_instance.UsersDB.usersToken[user] = userToken 
+
+        self._service_instance.UsersDB.usersToken[user] = userToken 
+        self._service_instance.usersTok.append(user)
 
     
 class Revocations (IceFlix.Revocations):
@@ -44,7 +45,6 @@ class Revocations (IceFlix.Revocations):
         self._service_proxy = service_proxy
 
     def revokeToken(self, userToken, srvId, current=None):
-        print("Token "+str(userToken)+" de "+str(srvId)+" ha expirado")
 
         if srvId == self._service_instance.service_id or self._service_proxy.ice_isA("::IceFlix::MediaCatalog"):
             return
@@ -57,7 +57,9 @@ class Revocations (IceFlix.Revocations):
                 user = key
                 
         if token_encontrado:
-            self._service_instance.UsersDB.usersToken[user] = ""
+            self._service_instance.usersTok.pop(0)
+            self._service_instance.UsersDB.usersToken.pop(user)
+            print("Token "+str(userToken)+" de "+str(user)+" ha expirado")
             #self._service_instance.refreshAuthorization(user, self._service_instance.UsersDB.userPasswords.get(user))
             #self._service_instance.UsersDB.usersToken.pop(user)
     

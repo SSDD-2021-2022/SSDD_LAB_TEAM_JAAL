@@ -56,13 +56,12 @@ class Client(Ice.Application):
     
     def renovarTokenUser(self, current = None):
         if self.valid:
-            #print("Vergostulis")
-            self.auth.refreshAuthorization(self.userTok[self.cont], self.passTok[self.cont])
+            try:
+                self.auth.refreshAuthorization(self.userTok[self.cont], self.passTok[self.cont])
+            except IceFlix.Unauthorized:
+                print("Usuario " + self.userTok[self.cont] + " no autorizado")
             renovarToken = threading.Timer(30, self.renovarTokenUser)
             renovarToken.start()
-
-
-            
 
 
     def run(self, args):
@@ -81,9 +80,16 @@ class Client(Ice.Application):
                 password = getpass.getpass("Introduzca contraseña:\n")
                 passSha = hashlib.sha256(password.encode()).hexdigest()
                 userToken = ""
+                try:
+                    self.auth = main.getAuthenticator()
+                except IceFlix.TemporaryUnavailable:
+                    print("AuthenticatorServices no disponibles")
+                    return
+                try:
+                    userToken = self.auth.refreshAuthorization(user, passSha)
+                except IceFlix.Unauthorized:
+                    print("Usuario " + user + " no autorizado")
                 
-                self.auth = main.getAuthenticator()
-                userToken = self.auth.refreshAuthorization(user, passSha)
                 self.userTok.append(user)
                 self.passTok.append(passSha)
                 self.cont = self.cont + 1
@@ -97,8 +103,19 @@ class Client(Ice.Application):
                     opcion_catalogo = input("Elija si quiere hacer alguna gestión de catálogo o prefiere salir.\n1. Obtener título por id\n2. Obtener título por tags\n3. Añadir tags a un determinado medio\n4. Borrar tags\n5. Volver al menú\n")
                     if opcion_catalogo == "1":
                         idPelicula = input("Introduce id de la película\n")
-                        media = main.getCatalog()
-                        print(media.getTile(idPelicula, userToken).info.name)
+                        try:
+                            media = main.getCatalog()
+                        except IceFlix.TemporaryUnavailable:
+                            print("MediaCatalogServices no disponibles")
+                        try:
+                            print(media.getTile(idPelicula, userToken).info.name)
+                        except IceFlix.WrongMediaId:
+                            print("Id " + idPelicula + " erróneo")
+                        except IceFlix.TemporaryUnavailable:
+                            print("Microservicio no disponibles")
+                        except IceFlix.Unauthorized:
+                            print("Usuario no autorizado")
+                        
                     elif(opcion_catalogo == "2"):
                         tags = input("Introduzca las tags que quiera buscar separandolas por el caracter ','\n")
                         listaTags = tags.split(",")
@@ -106,21 +123,39 @@ class Client(Ice.Application):
                         incTags=input("¿Desea mostrar todos los ids con algun tag de los que intriduce por teclado (1) o por el contrario el medio con esos tags específicos(2)\n")
                         if(incTags == "2"):
                             todosTags = True
-                        print(main.getCatalog().getTilesByTags(listaTags, todosTags, userToken))
+                        try:
+                            print(main.getCatalog().getTilesByTags(listaTags, todosTags, userToken))
+                        except IceFlix.TemporaryUnavailable:
+                            print("MediaCatalogServices no disponibles")
+                        except IceFlix.Unauthorized:
+                            print("Usuario no autorizado")
 
                     elif(opcion_catalogo == "3"):
                         id = input("Introduzca id del medio al que quiera añadir las tags\n")
                         tags = input("Introduzca las tags que quiera añadir separandolas por el caracter ','\n")
                         listaTags = tags.split(",")
+                        try:
+                            main.getCatalog().addTags(id, listaTags, userToken)
+                        except IceFlix.TemporaryUnavailable:
+                            print("MediaCatalogServices no disponibles")
+                        except IceFlix.Unauthorized:
+                            print("Usuario no autorizado")
+                        except IceFlix.WrongMediaId:
+                            print("Id " + id + " erróneo")
 
-                        main.getCatalog().addTags(id, listaTags, userToken)
                         
                     elif(opcion_catalogo == "4"):
                         id = input("Introduzca id del medio al que quiera borrar las tags\n")
                         tags = input("Introduzca las tags que quiera borrar separandolas por el caracter ','\n")
                         listaTags = tags.split(",")
-                        main.getCatalog().removeTags(id, listaTags, userToken)
-                    
+                        try:
+                            main.getCatalog().removeTags(id, listaTags, userToken)
+                        except IceFlix.TemporaryUnavailable:
+                            print("MediaCatalogServices no disponibles")
+                        except IceFlix.Unauthorized:
+                            print("Usuario no autorizado")
+                        except IceFlix.WrongMediaId:
+                            print("Id " + id + " erróneo")
 
                     else:
                         #self.valid = False
@@ -136,17 +171,32 @@ class Client(Ice.Application):
                     passSha = hashlib.sha256(password.encode()).hexdigest()
                     try:
                         main.getAuthenticator().addUser(user, passSha, tokenAdmin)
+                    except IceFlix.TemporaryUnavailable:
+                        print("AuthenticatorServices no disponibles")
                     except IceFlix.Unauthorized:
                         print("Usuario inexistente")
                         sys.exit(1)
 
                 elif(opcionAdmin == "2"):
                     user = input("Introduce usuario:\n")
-                    main.getAuthenticator().removeUser(user, tokenAdmin)
+                    try:
+                        main.getAuthenticator().removeUser(user, tokenAdmin)
+                    except IceFlix.TemporaryUnavailable:
+                        print("AuthenticatorServices no disponibles")
+                    except IceFlix.Unauthorized:
+                        print("Usuario inexistente")
                 elif(opcionAdmin == "3"):
                     id = input("Introduzca id del medio\n")
                     name = input("Introduzca el nuevo nombre que le quiera dar al título del medio\n")
-                    main.getCatalog().renameTile(id,name,tokenAdmin)
+                    try:
+                        main.getCatalog().renameTile(id,name,tokenAdmin)
+                    except IceFlix.TemporaryUnavailable:
+                        print("MediaCatalogServices no disponibles")
+                    except IceFlix.Unauthorized:
+                        print("Usuario no autorizado")
+                    except IceFlix.WrongMediaId:
+                        print("Id " + id + " erróneo")
+                    
             elif(conectar_opcion == "4"):
                 opcion_catalogo = input("¿Qué búsqueda quiere hacer?\n1. Búsqueda por nombre\n")
                 # if(opcion_catalogo == "1"):
@@ -159,7 +209,10 @@ class Client(Ice.Application):
                     todosId = False
                     if todosIDUser == "2":
                         todosId = True
-                    print(str(main.getCatalog().getTilesByName(nombrePelicula, todosId)))
+                    try:
+                        print(str(main.getCatalog().getTilesByName(nombrePelicula, todosId)))
+                    except IceFlix.TemporaryUnavailable:
+                        print("MediaCatalogServices no disponibles")
             else:
                 print("Saliendo...")
                 self.salir = 1

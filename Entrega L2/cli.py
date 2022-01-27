@@ -25,12 +25,10 @@ class Client(Ice.Application):
         self.conectado = False
         self.check = 3
         self.salir = 0
-        self.userTok = []
-        self.passTok = []
-        self.valid = True
-        self.cont = -1
-
-
+        # self.userTok = []
+        # self.passTok = []
+        # self.valid = True
+        # self.cont = -1
 
     def checkPrxMain(self, current = None):
         
@@ -67,6 +65,13 @@ class Client(Ice.Application):
 
     def run(self, args):
 
+        adapter = self.communicator().createObjectAdapterWithEndpoints('ClientService', 'tcp')
+        adapter.activate()
+        revocations_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'Revocations')
+        revocations_subscriber = Revocations("client", "")
+        revocations_subscriber_proxy = adapter.addWithUUID(revocations_subscriber)
+        revocations_topic.subscribeAndGetPublisher({}, revocations_subscriber_proxy)
+
         while(self.salir == 0):
             print("Menú del programa\n1. Conectar\n2. Autenticar\n3. Opciones de administración\n4. Opciones de catálogo sin autenticación\n")
             conectar_opcion = input()
@@ -83,12 +88,18 @@ class Client(Ice.Application):
                 userToken = ""
                 
                 self.auth = main.getAuthenticator()
+                revocations_subscriber._service_proxy = self.auth
+                #revocations_subscriber._service_instance = self.auth.get_instance
                 userToken = self.auth.refreshAuthorization(user, passSha)
-                self.userTok.append(user)
-                self.passTok.append(passSha)
-                self.cont = self.cont + 1
-                renovarToken = threading.Timer(31, self.renovarTokenUser)
-                renovarToken.start()
+                if userToken!="":
+                    revocations_subscriber.password = passSha
+                    revocations_subscriber.userRevoked = user
+                    revocations_subscriber.dictUsers[user] = passSha
+                #self.userTok.append(user)
+                #self.passTok.append(passSha)
+                #self.cont = self.cont + 1
+                #renovarToken = threading.Timer(31, self.renovarTokenUser)
+                #renovarToken.start()
                 print(userToken)
             
                 mostrarMenuC = True

@@ -54,6 +54,10 @@ class AuthenticatorI(IceFlix.Authenticator):
         """Get instance ID."""
         return self._id_
     
+    @property
+    def get_instance(self, current = None):
+        return self
+    
     def newDirectory(self):
         global UB_JSON_USERS
         ruta_dir = UB_JSON_USERS+"bdUser_"+self.service_id
@@ -90,6 +94,7 @@ class AuthenticatorI(IceFlix.Authenticator):
 
         if len(self.UsersDB.usersToken) != 0 and user in self.UsersDB.usersToken:
             print("buenas tardes")
+            print(self.UsersDB.usersToken)
             return
 
         for key, value in self.UsersDB.userPasswords.items():
@@ -110,7 +115,7 @@ class AuthenticatorI(IceFlix.Authenticator):
        
         self.usersTok.append(user)
         #A los 2 min revocar token y dar otro
-        revokeToken = threading.Timer(30, self.revokeTokenUser)
+        revokeToken = threading.Timer(12.0, self.revokeTokenUser)
         revokeToken.start()
         #self.revokeTokenUser(token)
         

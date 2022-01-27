@@ -8,8 +8,6 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
 
     def __init__(self, service_type, service_instance, service_proxy, current=None):
         """Initialize the Discover object with empty services."""
-        # self.volatile_services = IceFlix.VolatileServices()
-        #aututhenticators = self.volatile_services.AuthenticatorList()
         self._id_ = str(uuid.uuid4())
         self._service_type = service_type
         self._service_instance = service_instance
@@ -20,7 +18,6 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
         self.poll_timer = threading.Timer(5.0, self.remote_wrong_proxies) #no ponemos los parentesis a la funcion porque sino cogeria lo que retorna como valor
         self.poll_timer.start()
         self.announce_time = None
-        #lanzar new Service en run
 
     @property
     def known_services(self):
@@ -51,11 +48,6 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
     def announce(self, service, srvId, current=None):  # pylint: disable=unused-argument
         """Check service type and add it."""
         if srvId in self.known_services:
-            # print(f'Service {srvId} announcingself')
-            # print("*************************************")
-            # print("Known Services")
-            # print(self.known_services)
-            # print("*************************************")
             return
         if service.ice_isA('::IceFlix::Authenticator'):
             print(f'New AuthenticatorService running: {srvId}')
@@ -71,7 +63,6 @@ class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
         elif service.ice_isA('::IceFlix::Main'):
              print(f'New MainService running: {srvId}')
              self.mains[srvId] = IceFlix.MainPrx.uncheckedCast(service)
-             #actualiza base de datos
         print(self.known_services)
         
     

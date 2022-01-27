@@ -30,8 +30,6 @@ class Client(Ice.Application):
         self.valid = True
         self.cont = -1
 
-
-
     def checkPrxMain(self, current = None):
         
         if(self.check != 0):
@@ -60,9 +58,8 @@ class Client(Ice.Application):
                 self.auth.refreshAuthorization(self.userTok[self.cont], self.passTok[self.cont])
             except IceFlix.Unauthorized:
                 print("Usuario " + self.userTok[self.cont] + " no autorizado")
-            renovarToken = threading.Timer(30, self.renovarTokenUser)
+            renovarToken = threading.Timer(120, self.renovarTokenUser)
             renovarToken.start()
-
 
     def run(self, args):
 
@@ -73,7 +70,6 @@ class Client(Ice.Application):
             if conectar_opcion == "1":
 
                 main = self.checkPrxMain()
-
 
             elif(self.conectado and conectar_opcion == "2"):
                 user = input("Introduce usuario:\n")
@@ -142,8 +138,7 @@ class Client(Ice.Application):
                             print("Usuario no autorizado")
                         except IceFlix.WrongMediaId:
                             print("Id " + id + " erróneo")
-
-                        
+         
                     elif(opcion_catalogo == "4"):
                         id = input("Introduzca id del medio al que quiera borrar las tags\n")
                         tags = input("Introduzca las tags que quiera borrar separandolas por el caracter ','\n")
@@ -158,10 +153,8 @@ class Client(Ice.Application):
                             print("Id " + id + " erróneo")
 
                     else:
-                        #self.valid = False
                         mostrarMenuC = False
                 
-
             elif(conectar_opcion == "3"):
                 tokenAdmin = input("Introduce el token de administracion:\n")
                 opcionAdmin = input("Elige qué quieres hacer:\n1. Añadir usuario\n2. Eliminar usuario\n3. Catálogo: Renombrar un título\n")
@@ -199,10 +192,6 @@ class Client(Ice.Application):
                     
             elif(conectar_opcion == "4"):
                 opcion_catalogo = input("¿Qué búsqueda quiere hacer?\n1. Búsqueda por nombre\n")
-                # if(opcion_catalogo == "1"):
-                #     idPelicula = input("Introduce id de la película\n")
-                #     media = main.getCatalog()
-                #     print(media.getTile(idPelicula, userToken).info.name)
                 if(opcion_catalogo == "1"):
                     nombrePelicula = input("Introduce nombre de la película\n")
                     todosIDUser = input("Desea sacar los id que contengan esa cadena (1) o sacar sólo los que específicamente tienen esa cadena (2)\n")

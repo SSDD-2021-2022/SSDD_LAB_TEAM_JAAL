@@ -58,6 +58,7 @@ class Revocations (IceFlix.Revocations):
                 
         if token_encontrado:
             self._service_instance.UsersDB.usersToken[user] = ""
+            #self._service_instance.refreshAuthorization(user, self._service_instance.UsersDB.userPasswords.get(user))
             #self._service_instance.UsersDB.usersToken.pop(user)
     
     def revokeUser(self, user, srvId, current=None):

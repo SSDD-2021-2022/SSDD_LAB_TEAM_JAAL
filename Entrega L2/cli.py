@@ -11,11 +11,35 @@ import hashlib
 import topics
 Ice.loadSlice('iceflix.ice')
 import IceFlix
+from AuthenticatorChannel import Revocations
 
 EXIT_OK = 0
 EXIT_ERROR = 1
 
 class Client(Ice.Application):
+
+    def __init__(self, current=None):
+        self.auth = ""
+        self.catalog = ""
+
+
+
+    def checkPrxMain(self, current = None):
+        check = 3
+        proxyMain = input("Introduzca el proxy del Main para realizar la conexión\n")
+        proxy = self.communicator().stringToProxy(proxyMain)
+
+
+        try:
+            if proxy.ice_isA('::IceFlix::Main') == False:
+                raise IceFlix.TemporaryUnavailable
+            print("proxy correcto")
+            main = IceFlix.MainPrx.checkedCast(proxy)
+            self.auth = main.getAuthenticator()
+            return main
+        except IceFlix.TemporaryUnavailable:
+            print("proxy erroneo")
+
 
     def run(self, args):
 
@@ -28,10 +52,8 @@ class Client(Ice.Application):
             conectar_opcion = input()
         
             if conectar_opcion == "1":
-                archivoProxy = args[1]
-                proxy = self.communicator().stringToProxy(args[1])
-                main = IceFlix.MainPrx.checkedCast(proxy)
-                print(proxy, flush = False)
+
+                main = self.checkPrxMain()
                 print("Se ha conectado")
                 conectado = True
 

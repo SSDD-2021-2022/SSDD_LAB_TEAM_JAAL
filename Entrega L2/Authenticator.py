@@ -85,7 +85,12 @@ class AuthenticatorI(IceFlix.Authenticator):
 
     def refreshAuthorization(self, user, passwordHash, current=None):
         # try: 
-        
+        token = ""
+        revokeToken = ""
+
+        # if self.user == user:
+        #     print("Mismo usuario refrescando Token")
+        #     revokeToken.cancel()
 
         for key, value in self.UsersDB.userPasswords.items():
             userJSON = key
@@ -105,7 +110,7 @@ class AuthenticatorI(IceFlix.Authenticator):
        
         self.user = user
         #A los 2 min revocar token y dar otro
-        revokeToken = threading.Timer(120000.0, self.revokeTokenUser)
+        revokeToken = threading.Timer(12.0, self.revokeTokenUser)
         revokeToken.start()
         #self.revokeTokenUser(token)
         
@@ -118,6 +123,8 @@ class AuthenticatorI(IceFlix.Authenticator):
         self.revocations_publisher.revokeToken(self.UsersDB.usersToken.get(self.user), self.service_id)
         #eliminamos el token y mandamos notificacion al canal
         self.UsersDB.usersToken[self.user] = ""
+        self.refreshAuthorization(self.user, self.UsersDB.userPasswords.get(self.user))
+
             
     def isAuthorized(self, userToken, current = None):
         isAuth = False

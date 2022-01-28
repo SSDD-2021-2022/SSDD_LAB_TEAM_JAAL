@@ -72,24 +72,26 @@ class Revocations (IceFlix.Revocations):
                     #self._service_instance.refreshAuthorization(user, self._service_instance.UsersDB.userPasswords.get(user))
                     #self._service_instance.UsersDB.usersToken.pop(user)
             
-        if srvId == self._service_instance.service_id or self._service_proxy.ice_isA("::IceFlix::MediaCatalog"):
-            return
+        # if srvId == self._service_instance.service_id or self._service_proxy.ice_isA("::IceFlix::MediaCatalog"):
+        #     return
         
-        token_encontrado = False
-        user = ""
-        for key, value in self._service_instance.UsersDB.usersToken.items():
-            if value == userToken:
-                token_encontrado = True
-                user = key
+        # token_encontrado = False
+        # user = ""
+        # for key, value in self._service_instance.UsersDB.usersToken.items():
+        #     if value == userToken:
+        #         token_encontrado = True
+        #         user = key
                 
-        if token_encontrado:
-            self._service_instance.usersTok.pop(0)
-            self._service_instance.UsersDB.usersToken.pop(user)
-            print("Token "+str(userToken)+" de "+str(user)+" ha expirado")
+        # if token_encontrado:
+        #     self._service_instance.usersTok.pop(0)
+        #     self._service_instance.UsersDB.usersToken.pop(user)
+        #     print("Token "+str(userToken)+" de "+str(user)+" ha expirado")
     
     def revokeUser(self, user, srvId, current=None):
         
         #actualizamos json
+        if self._service_instance == "client":
+            return
         if srvId == self._service_instance.service_id:
             return
 

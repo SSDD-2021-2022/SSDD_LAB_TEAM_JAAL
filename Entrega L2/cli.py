@@ -54,14 +54,14 @@ class Client(Ice.Application):
             print("Demasiados intentos de conexión")
             self.salir = 1
     
-    def renovarTokenUser(self, current = None):
-        if self.valid:
-            try:
-                self.auth.refreshAuthorization(self.userTok[self.cont], self.passTok[self.cont])
-            except IceFlix.Unauthorized:
-                print("Usuario " + self.userTok[self.cont] + " no autorizado")
-            renovarToken = threading.Timer(120, self.renovarTokenUser)
-            renovarToken.start()
+    # def renovarTokenUser(self, current = None):
+    #     if self.valid:
+    #         try:
+    #             self.auth.refreshAuthorization(self.userTok[self.cont], self.passTok[self.cont])
+    #         except IceFlix.Unauthorized:
+    #             print("Usuario " + self.userTok[self.cont] + " no autorizado")
+    #         renovarToken = threading.Timer(120, self.renovarTokenUser)
+    #         renovarToken.start()
 
     def run(self, args):
 
@@ -97,19 +97,19 @@ class Client(Ice.Application):
                 
                 self.auth = main.getAuthenticator()
                 revocations_subscriber._service_proxy = self.auth
-                #revocations_subscriber._service_instance = self.auth.get_instance
-                userToken = self.auth.refreshAuthorization(user, passSha)
+                print(userToken)
                 if userToken!="":
                     revocations_subscriber.password = passSha
                     revocations_subscriber.userRevoked = user
                     revocations_subscriber.dictUsers[user] = passSha
+                    #userToken = self.auth.refreshAuthorization(user, passSha)
                 #self.userTok.append(user)
                 #self.passTok.append(passSha)
                 #self.cont = self.cont + 1
                 #renovarToken = threading.Timer(31, self.renovarTokenUser)
                 #renovarToken.start()
 
-                print(userToken)
+                
             
                 mostrarMenuC = True
                 while(mostrarMenuC):

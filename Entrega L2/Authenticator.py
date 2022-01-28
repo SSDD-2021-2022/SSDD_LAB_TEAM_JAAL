@@ -52,10 +52,6 @@ class AuthenticatorI(IceFlix.Authenticator):
         """Get instance ID."""
         return self._id_
     
-    @property
-    def get_instance(self, current = None):
-        return self
-    
     def newDirectory(self):
         global UB_JSON_USERS
         ruta_dir = UB_JSON_USERS+"bdUser_"+self.service_id

@@ -38,6 +38,7 @@ class Revocations (IceFlix.Revocations):
         self._service_proxy = service_proxy
         self.userRevoked = ""
         self.password = ""
+        self.newTokenUser = ""
         self.dictUsers = {}
 
     def revokeToken(self, userToken, srvId, current=None):
@@ -49,8 +50,8 @@ class Revocations (IceFlix.Revocations):
             if self.userRevoked != "":
                 time.sleep(1)
                 #password = self._service_instance.UsersDB.userPasswords.get(self.userRevoked)
-                for user, password in self.dictUsers.items():
-                    self._service_proxy.refreshAuthorization(user, password)
+                #for user, password in self.dictUsers.items():
+                self.newTokenUser = self._service_proxy.refreshAuthorization(self.userRevoked, self.password)
         else:
 
             if srvId == self._service_instance.service_id or self._service_proxy.ice_isA("::IceFlix::MediaCatalog"):
@@ -71,21 +72,6 @@ class Revocations (IceFlix.Revocations):
                     self.userRevoked = user
                     #self._service_instance.refreshAuthorization(user, self._service_instance.UsersDB.userPasswords.get(user))
                     #self._service_instance.UsersDB.usersToken.pop(user)
-            
-        # if srvId == self._service_instance.service_id or self._service_proxy.ice_isA("::IceFlix::MediaCatalog"):
-        #     return
-        
-        # token_encontrado = False
-        # user = ""
-        # for key, value in self._service_instance.UsersDB.usersToken.items():
-        #     if value == userToken:
-        #         token_encontrado = True
-        #         user = key
-                
-        # if token_encontrado:
-        #     self._service_instance.usersTok.pop(0)
-        #     self._service_instance.UsersDB.usersToken.pop(user)
-        #     print("Token "+str(userToken)+" de "+str(user)+" ha expirado")
     
     def revokeUser(self, user, srvId, current=None):
         

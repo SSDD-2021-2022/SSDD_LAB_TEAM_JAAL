@@ -122,6 +122,7 @@ class Client(Ice.Application):
                         except IceFlix.TemporaryUnavailable:
                             print("MediaCatalogServices no disponibles")
                         try:
+                            userToken = revocations_subscriber.newTokenUser
                             print(media.getTile(idPelicula, userToken).info.name)
                         except IceFlix.WrongMediaId:
                             print("Id " + idPelicula + " erróneo")
@@ -138,6 +139,7 @@ class Client(Ice.Application):
                         if(incTags == "2"):
                             todosTags = True
                         try:
+                            userToken = revocations_subscriber.newTokenUser
                             print(main.getCatalog().getTilesByTags(listaTags, todosTags, userToken))
                         except IceFlix.TemporaryUnavailable:
                             print("MediaCatalogServices no disponibles")
@@ -149,6 +151,7 @@ class Client(Ice.Application):
                         tags = input("Introduzca las tags que quiera añadir separandolas por el caracter ','\n")
                         listaTags = tags.split(",")
                         try:
+                            userToken = revocations_subscriber.newTokenUser
                             main.getCatalog().addTags(id, listaTags, userToken)
                         except IceFlix.TemporaryUnavailable:
                             print("MediaCatalogServices no disponibles")
@@ -162,6 +165,7 @@ class Client(Ice.Application):
                         tags = input("Introduzca las tags que quiera borrar separandolas por el caracter ','\n")
                         listaTags = tags.split(",")
                         try:
+                            userToken = revocations_subscriber.newTokenUser
                             main.getCatalog().removeTags(id, listaTags, userToken)
                         except IceFlix.TemporaryUnavailable:
                             print("MediaCatalogServices no disponibles")

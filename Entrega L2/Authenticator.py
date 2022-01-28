@@ -84,7 +84,7 @@ class AuthenticatorI(IceFlix.Authenticator):
         revokeToken = ""
 
         if len(self.UsersDB.usersToken) != 0 and user in self.UsersDB.usersToken:
-            print("buenas tardes")
+            #print("buenas tardes")
             print(self.UsersDB.usersToken)
             return
 

@@ -45,8 +45,7 @@ class Revocations (IceFlix.Revocations):
 
 
         if self._service_instance == "client":
-            print("El cliente esta intentando renovar el token")
-            print("user revocado "+self.userRevoked)
+            
             if self.userRevoked != "":
                 time.sleep(1)
                 #password = self._service_instance.UsersDB.userPasswords.get(self.userRevoked)
@@ -70,8 +69,6 @@ class Revocations (IceFlix.Revocations):
                     self._service_instance.UsersDB.usersToken.pop(user)
                     print("Token "+str(userToken)+" de "+str(user)+" ha expirado")
                     self.userRevoked = user
-                    #self._service_instance.refreshAuthorization(user, self._service_instance.UsersDB.userPasswords.get(user))
-                    #self._service_instance.UsersDB.usersToken.pop(user)
     
     def revokeUser(self, user, srvId, current=None):
         

@@ -151,7 +151,6 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             raise IceFlix.WrongMediaId
 
         return media
-        
 
     def getTilesByName(self, name, exact, current=None):
         id = []
@@ -166,7 +165,6 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                 if(name in pelis.name):
                     id.append(pelis.mediaId)
         return id
-
 
     def getTilesByTags(self, tags, allTags, userToken, current=None):
         idAT = []
@@ -199,7 +197,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         return idAT
 
     def addTags(self, mediaId, tag, userToken, current=None):
-        # try:
+       
         continuar = False
         auth_c = random.choice(list(self._service_announcements_subscriber.authenticators.values()))
         user = auth_c.whois(userToken)
@@ -229,6 +227,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             raise IceFlix.WrongMediaId
         
     def removeTags(self, mediaId, tags, userToken, current=None):
+
         auth_c = random.choice(list(self._service_announcements_subscriber.authenticators.values()))
         continuar=False
         user = auth_c.whois(userToken)
@@ -251,7 +250,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             raise IceFlix.WrongMediaId
 
     def renameTile(self, mediaId, name, adminToken, current=None):
-        # try:
+        
         main_c = random.choice(list(self._service_announcements_subscriber.mains.values()))
         if main_c.isAdmin(adminToken):
             continuar=False
@@ -367,12 +366,7 @@ class ClientCatalog(Ice.Application):
 
         
         service_implementation.initService()
-        # list = ["terror", "romance", "comedia", "accion"]
-        # def llamarRemove():
-        #     print(service_implementation.getTilesByTags(list, True, "sda"))
-        # t=threading.Timer(4.0, llamarRemove)
-        # t.start()
-        
+     
         self.shutdownOnInterrupt()
         self.communicator().waitForShutdown()
         
@@ -381,7 +375,6 @@ class ClientCatalog(Ice.Application):
         service_implementation.removeDirR()
         service_implementation.announcements.cancel()
         service_announce_subscriber.poll_timer.cancel()
-        # t.cancel()
         
         service_announce_topic.unsubscribe(service_announce_subscriber_proxy)
         

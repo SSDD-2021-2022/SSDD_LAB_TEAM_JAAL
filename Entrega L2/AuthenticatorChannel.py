@@ -9,17 +9,11 @@ class UserUpdates (IceFlix.UserUpdates):
 
     def __init__(self, service_instance, service_proxy, current=None):
         """Initialize the Discover object with empty services."""
-        # self.volatile_services = IceFlix.VolatileServices()
-        # aututhenticators = self.volatile_services.AuthenticatorList()
-        # self._id_ = str(uuid.uuid4())
-        # self._service_type = service_type
         self._service_instance = service_instance
         self._service_proxy = service_proxy
 
     def newUser(self, user, passwordHash, srvId, current=None):
         #actualizamos json
-        
-
         if srvId == self._service_instance.service_id:
             return
         else:
@@ -29,8 +23,6 @@ class UserUpdates (IceFlix.UserUpdates):
 
     def newToken(self, user, userToken, srvId, current=None):
         #actualizamos json
-        #self._service_instance.newBD()
-        
         if srvId == self._service_instance.service_id:
             return
 
@@ -49,6 +41,7 @@ class Revocations (IceFlix.Revocations):
         self.dictUsers = {}
 
     def revokeToken(self, userToken, srvId, current=None):
+
 
         if self._service_instance == "client":
             print("El cliente esta intentando renovar el token")
@@ -79,11 +72,24 @@ class Revocations (IceFlix.Revocations):
                     #self._service_instance.refreshAuthorization(user, self._service_instance.UsersDB.userPasswords.get(user))
                     #self._service_instance.UsersDB.usersToken.pop(user)
             
+        if srvId == self._service_instance.service_id or self._service_proxy.ice_isA("::IceFlix::MediaCatalog"):
+            return
+        
+        token_encontrado = False
+        user = ""
+        for key, value in self._service_instance.UsersDB.usersToken.items():
+            if value == userToken:
+                token_encontrado = True
+                user = key
+                
+        if token_encontrado:
+            self._service_instance.usersTok.pop(0)
+            self._service_instance.UsersDB.usersToken.pop(user)
+            print("Token "+str(userToken)+" de "+str(user)+" ha expirado")
     
     def revokeUser(self, user, srvId, current=None):
+        
         #actualizamos json
-        #self._service_instance.newBD()
-
         if srvId == self._service_instance.service_id:
             return
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 #from _typeshed import Self
+
 from os import mkdir, remove, rmdir
 from shutil import rmtree
 import sys
@@ -21,12 +22,10 @@ from ServiceAnnounce import ServiceAnnouncements
 from AuthenticatorChannel import Revocations
 from AuthenticatorChannel import UserUpdates
 
-
-
 class AuthenticatorI(IceFlix.Authenticator):
 
     def __init__(self, service_announcements_subscriber, prx_service, srv_announce_pub, userUpdates_subscriber, userUpdates_publisher, revocations_subscriber, revocations_publisher):
-        #self._user_updates_subscriber_ = user_updates_subscriber
+
         self._id_ = str(uuid.uuid4())
         self._service_announcements_subscriber = service_announcements_subscriber
         self._prx_service = prx_service
@@ -47,7 +46,6 @@ class AuthenticatorI(IceFlix.Authenticator):
         self.UsersDB.userPasswords = UsersPasswords
         self.UsersDB.usersToken = UsersToken
         self.newDirectory()
-        #self.newBD()
     
     @property
     def service_id(self):
@@ -62,7 +60,6 @@ class AuthenticatorI(IceFlix.Authenticator):
         global UB_JSON_USERS
         ruta_dir = UB_JSON_USERS+"bdUser_"+self.service_id
         mkdir(ruta_dir)
-        #self.newBD(self)
 
     def newBD(self):
         global UB_JSON_USERS
@@ -80,15 +77,13 @@ class AuthenticatorI(IceFlix.Authenticator):
             print("Ultimo servicio en ejecucion, actualizando base de datos de credenciales.json...")
             self.updateLastServiceDB()
 
-
-
     def removeDirR(self):
         global UB_JSON_USERS
         ruta_dir = UB_JSON_USERS+"bdUser_"+self.service_id
         rmtree(ruta_dir)
 
     def refreshAuthorization(self, user, passwordHash, current=None):
-        # try: 
+        
         token = ""
         revokeToken = ""
 
@@ -117,12 +112,8 @@ class AuthenticatorI(IceFlix.Authenticator):
         #A los 2 min revocar token y dar otro
         revokeToken = threading.Timer(12.0, self.revokeTokenUser)
         revokeToken.start()
-        #self.revokeTokenUser(token)
         
         return token
-
-        # except IceFlix.Unauthorized:
-        #     print("Usuario no autorizado")
 
     def revokeTokenUser(self):
         user = self.usersTok.pop(0)
@@ -130,8 +121,6 @@ class AuthenticatorI(IceFlix.Authenticator):
         #eliminamos el token y mandamos notificacion al canal
         self.UsersDB.usersToken.pop(user)
         print("ha expirado el token del usuario " + user)
-        #self.refreshAuthorization(self.user, self.UsersDB.userPasswords.get(self.user))
-
             
     def isAuthorized(self, userToken, current = None):
         isAuth = False
@@ -143,26 +132,19 @@ class AuthenticatorI(IceFlix.Authenticator):
 
     def whois(self, userToken, current = None):
         user = ""
-        # try:
+        
         for key, value in self.UsersDB.usersToken.items():
             if userToken == value:
                 user = key
 
-        # for element in self.UsersDB.UsersToken:
-        #     if userToken == self.UsersDB.UsersToken[element]["token"]:
-        #         user = self.dictTokens[element]["user"]
-        
         if (user == ""):
             raise IceFlix.Unauthorized
 
         return user
-        
-        # except IceFlix.Unauthorized:
-        #     print("Usuario no autorizado")
 
     def addUser(self, user, passwordHash, adminToken, current = None):
         global UB_JSON_USERS
-        # try: 
+        
         usuarioExistente = False
         main_c = random.choice(list(self._service_announcements_subscriber.mains.values()))
 
@@ -170,22 +152,16 @@ class AuthenticatorI(IceFlix.Authenticator):
             raise IceFlix.Unauthorized
         
         if(main_c.isAdmin(adminToken)):
-            #data = json.loads(open('credenciales.json').read())
             self.UsersDB.userPasswords[user] = passwordHash
-            #print("Usuario "+user+" existente. Password cambiada con éxito")
-            
             ruta_dir = UB_JSON_USERS+"bdUser_"+self.service_id
             with open(ruta_dir+'/credenciales.json','w') as file:
                 json.dump(self.UsersDB.userPasswords, file) 
-        
-        # except IceFlix.Unauthorized:
-        #     print("Usuario no autorizado")
 
         self.userUpdates_publisher.newUser(user, passwordHash, self.service_id)
 
 
     def removeUser(self, user, adminToken, current = None):
-        # try:
+    
         userEncontrado = False
         print("lista de mains que se han publicado:\n"+str(self._service_announcements_subscriber.mains))
         main_c = random.choice(list(self._service_announcements_subscriber.mains.values()))
@@ -196,7 +172,7 @@ class AuthenticatorI(IceFlix.Authenticator):
             for key, value in self.UsersDB.userPasswords.items():
                 if key == user:
                     userEncontrado = True
-                    #self.UsersDB.userPasswords.pop(user)
+                    
             if userEncontrado:
                 self.UsersDB.userPasswords.pop(user)
             ruta_dir = UB_JSON_USERS+"bdUser_"+self.service_id
@@ -205,8 +181,6 @@ class AuthenticatorI(IceFlix.Authenticator):
         print("Base de datos modificada\n"+str(self.UsersDB.userPasswords))
 
         self.revocations_publisher.revokeUser(user, self.service_id)
-
-
 
     def initService(self):
         print("Inicio de servicios")
@@ -314,23 +288,10 @@ class ClientAuthentication(Ice.Application):
         revocations_subscriber._service_proxy = service_proxy
 
         revocations_topic.subscribeAndGetPublisher({}, revocations_subscriber_proxy)
-
-
-        
-                
+       
         service_implementation.initService()
 
-
-        # def llamarRemove():
-        #     service_implementation.addUser("jose", "antonio", "token")
-        # t=threading.Timer(16.0, llamarRemove)
-        # t.start()
-
-
-    
-        
         self.shutdownOnInterrupt()
-        
        
         self.communicator().waitForShutdown()
         service_implementation.checkLastInstance()

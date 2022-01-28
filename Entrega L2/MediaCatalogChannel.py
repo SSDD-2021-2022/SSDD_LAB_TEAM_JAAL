@@ -20,7 +20,6 @@ class CatalogUpdates (IceFlix.CatalogUpdates):
                 pelicula.name = name
                 self._service_instance.generateJson2DB(self._service_instance.ruta)
 
-
     def addTags(self, mediaId, tags, user, srvId, current=None): 
         if srvId == self._service_instance.service_id:
             return

@@ -25,17 +25,12 @@ class Client(Ice.Application):
         self.conectado = False
         self.check = 3
         self.salir = 0
-<<<<<<< HEAD
         # self.userTok = []
         # self.passTok = []
         # self.valid = True
         # self.cont = -1
-=======
-        self.userTok = []
-        self.passTok = []
-        self.valid = True
-        self.cont = -1
->>>>>>> ee2dc8cf0c8d2594d60d330f878c7b5a36b89297
+       
+
 
     def checkPrxMain(self, current = None):
         
@@ -100,7 +95,6 @@ class Client(Ice.Application):
                 except IceFlix.Unauthorized:
                     print("Usuario " + user + " no autorizado")
                 
-<<<<<<< HEAD
                 self.auth = main.getAuthenticator()
                 revocations_subscriber._service_proxy = self.auth
                 #revocations_subscriber._service_instance = self.auth.get_instance
@@ -114,13 +108,7 @@ class Client(Ice.Application):
                 #self.cont = self.cont + 1
                 #renovarToken = threading.Timer(31, self.renovarTokenUser)
                 #renovarToken.start()
-=======
-                self.userTok.append(user)
-                self.passTok.append(passSha)
-                self.cont = self.cont + 1
-                renovarToken = threading.Timer(31, self.renovarTokenUser)
-                renovarToken.start()
->>>>>>> ee2dc8cf0c8d2594d60d330f878c7b5a36b89297
+
                 print(userToken)
             
                 mostrarMenuC = True

@@ -45,9 +45,10 @@ class Revocations (IceFlix.Revocations):
 
 
         if self._service_instance == "client":
+
             
             if self.userRevoked != "":
-                time.sleep(1)
+                time.sleep(0.05)
                 #password = self._service_instance.UsersDB.userPasswords.get(self.userRevoked)
                 #for user, password in self.dictUsers.items():
                 self.newTokenUser = self._service_proxy.refreshAuthorization(self.userRevoked, self.password)

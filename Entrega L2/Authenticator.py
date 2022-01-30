@@ -84,9 +84,11 @@ class AuthenticatorI(IceFlix.Authenticator):
         revokeToken = ""
 
         if len(self.UsersDB.usersToken) != 0 and user in self.UsersDB.usersToken:
-            #print("buenas tardes")
             print(self.UsersDB.usersToken)
-            return
+            token = self.UsersDB.usersToken.get(user)
+            if token == "":
+                return
+            return token
 
         for key, value in self.UsersDB.userPasswords.items():
             userJSON = key
@@ -106,17 +108,18 @@ class AuthenticatorI(IceFlix.Authenticator):
        
         self.usersTok.append(user)
         #A los 2 min revocar token y dar otro
-        revokeToken = threading.Timer(12.0, self.revokeTokenUser)
+        revokeToken = threading.Timer(120.0, self.revokeTokenUser)
         revokeToken.start()
         
         return token
 
     def revokeTokenUser(self):
-        user = self.usersTok.pop(0)
-        self.revocations_publisher.revokeToken(self.UsersDB.usersToken.get(user), self.service_id)
-        #eliminamos el token y mandamos notificacion al canal
-        self.UsersDB.usersToken.pop(user)
-        print("ha expirado el token del usuario " + user)
+        if len(self.usersTok) != 0 or len(self.UsersDB.usersToken) != 0:
+            user = self.usersTok.pop(0)
+            self.revocations_publisher.revokeToken(self.UsersDB.usersToken.get(user), self.service_id)
+            #eliminamos el token y mandamos notificacion al canal
+            self.UsersDB.usersToken.pop(user)
+            print("ha expirado el token del usuario " + user)
             
     def isAuthorized(self, userToken, current = None):
         isAuth = False

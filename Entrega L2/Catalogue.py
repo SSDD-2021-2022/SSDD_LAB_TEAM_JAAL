@@ -235,17 +235,19 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             raise IceFlix.Unauthorized
         for pelicula in self.MediaDBList:
             if pelicula.mediaId == mediaId:
+                print("id de la pelicula "+pelicula.mediaId)
                 continuar = True
                 newTags = pelicula.tagsPerUser.get(user)
-                for etiqueta in tags:
-                    if etiqueta in newTags:
-                        newTags.remove(etiqueta)
-        
-                pelicula.tagsPerUser[user] = newTags
+                if newTags is not None: #nuevo--> comprobar si newTags tiene algo para que no pete
+                    for etiqueta in tags:
+                        if etiqueta in newTags:
+                            newTags.remove(etiqueta)
+            
+                    pelicula.tagsPerUser[user] = newTags
 
-                self.generateJson2DB(self.ruta)
-                self.catalogUpdates_publisher.removeTags(mediaId, newTags, user, self.service_id)
-    
+                    self.generateJson2DB(self.ruta)
+                    self.catalogUpdates_publisher.removeTags(mediaId, newTags, user, self.service_id)
+        
         if(continuar==False):
             raise IceFlix.WrongMediaId
 

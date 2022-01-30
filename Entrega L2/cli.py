@@ -45,7 +45,6 @@ class Client(Ice.Application):
                 print(error)
                 time.sleep(5)
         else:
-            print("valor de check "+str(self.check))
             print("Demasiados intentos de conexión")
             self.salir = 1
     
@@ -67,10 +66,12 @@ class Client(Ice.Application):
                 main = self.checkPrxMain()
 
             elif(self.conectado and conectar_opcion == "2"):
+                userToken = ""
                 user = input("Introduce usuario:\n")
                 password = getpass.getpass("Introduzca contraseña:\n")
                 passSha = hashlib.sha256(password.encode()).hexdigest()
-                userToken = ""
+                
+
                 try:
                     self.auth = main.getAuthenticator()
                 except IceFlix.TemporaryUnavailable:
@@ -78,17 +79,19 @@ class Client(Ice.Application):
                     return
                 try:
                     userToken = self.auth.refreshAuthorization(user, passSha)
+                    self.tokenAsignado = True
                 except IceFlix.Unauthorized:
                     print("Usuario " + user + " no autorizado")
                 
                 self.auth = main.getAuthenticator()
                 revocations_subscriber._service_proxy = self.auth
                 print(userToken)
-                if userToken!="":
+                if userToken != "":
+                    
                     revocations_subscriber.password = passSha
                     revocations_subscriber.userRevoked = user
                     revocations_subscriber.dictUsers[user] = passSha
-                
+                    revocations_subscriber.newTokenUser = userToken
                 mostrarMenuC = True
                 while(mostrarMenuC):
 
@@ -204,6 +207,7 @@ class Client(Ice.Application):
                         print("MediaCatalogServices no disponibles")
             else:
                 print("Saliendo...")
+                
                 self.salir = 1
             
 

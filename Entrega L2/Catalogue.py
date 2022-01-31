@@ -1,27 +1,33 @@
 #!/usr/bin/env python3
-from asyncio import FastChildWatcher
-from curses import use_default_colors
-from os import mkdir, remove, rmdir
+#pylint:disable=W0613
+#pylint:disable=C0413
+#pylint:disable=E0401
+#pylint:disable=W0212
+#pylint:disable=C0103
+#pylint:disable=R0801
+from os import mkdir
 from shutil import rmtree
 import sys
 import uuid
 import json
-import Ice
-import topics
 import random
 import threading
+import Ice
+import topics
+
 Ice.loadSlice('iceflix.ice')
 import IceFlix
 from ServiceAnnounce import ServiceAnnouncements
 from MediaCatalogChannel import CatalogUpdates
 from AuthenticatorChannel import Revocations
-EXIT_ERROR=1
+EXIT_ERROR = 1
 
 UB_JSON_CATALOG = "./catalogBD/"
 
 class MediaCatalogI(IceFlix.MediaCatalog):
-    
+    """Class MediaCatalog"""
     def __init__(self, service_announcements_subscriber, prx_service, srv_announce_pub, catalogUpdates_subscriber, catalogUpdates_publisher, catalogRevocations_subscriber):
+        """Method"""
         self._id_ = str(uuid.uuid4())
         self._service_announcements_subscriber = service_announcements_subscriber
         self._prx_service = prx_service
@@ -52,15 +58,17 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         return self._id_
 
     def newDirectory(self):
+        """Method"""
         global UB_JSON_CATALOG
         ruta_dir = UB_JSON_CATALOG+"bdCatalog_"+self.service_id
         mkdir(ruta_dir)
 
     def newBD(self):
+        """Method"""
         infoPeliculas = json.loads(open('infoPeliculas.json').read())
         usuariosPeliculas = json.loads(open('usuariosPeliculas.json').read())
 
-        for key,value in infoPeliculas.items():
+        for key, value in infoPeliculas.items():
             dic = {}
             pelicula = IceFlix.MediaDB()
             pelicula.mediaId = key
@@ -74,43 +82,47 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                         dic[user] = tagsUser
                         pelicula.tagsPerUser = dic
             self.MediaDBList.append(pelicula)
-        
+
     def removeDirR(self):
+        """Method"""
         global UB_JSON_CATALOG
         ruta_dir = UB_JSON_CATALOG+"bdCatalog_"+self.service_id
         rmtree(ruta_dir)
-    
+
     def checkLastInstance(self):
+        """Method"""
         dictCatalog = self._service_announcements_subscriber.catalogs
         if(len(dictCatalog) == 1 and dictCatalog[self._id_]):
-            print("Ultimo servicio en ejecucion, actualizando base de datos del servicio de catálogo...")
+            print("Ultimo servicio ejecutandose, actualizando base de datos de catalog...")
             return True
         return False
 
     def updateDBjson(self):
+        """Method"""
         self.newBD()
         self.generateJson2DB(self.ruta)
 
     def generateJson2DB(self, ruta_dir):
+        """Method"""
         infoPeliculas = {}
         for pelicula in self.MediaDBList:
             infoPeliculas[pelicula.mediaId] = pelicula.name
-        with open(ruta_dir+'/infoPeliculas.json','w') as file:
+        with open(ruta_dir+'/infoPeliculas.json', 'w') as file:
             json.dump(infoPeliculas, file)
-    
+
         users = []
-       
+
         for infoPel in self.MediaDBList:
             if  infoPel.tagsPerUser is not None:
                 listaUsers = list(infoPel.tagsPerUser.items())
-                
+
                 for usuario, i in listaUsers:
                     users.append(usuario)
 
                 users = set(users)
                 users = list(users)
 
-        listUsersDef = []         
+        listUsersDef = []
         for i in users:
             dictUserId = {}
             dictIdTags = {}
@@ -122,60 +134,63 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             dictUserId["tags"] = dictIdTags
             listUsersDef.append(dictUserId)
 
-        dictDef = {}    
+        dictDef = {}
         dictDef["users"] = listUsersDef
-        
-        with open(ruta_dir+'/usuariosPeliculas.json','w') as file:
+
+        with open(ruta_dir+'/usuariosPeliculas.json', 'w') as file:
             json.dump(dictDef, file)
-            
+
     def getTile(self, mediaId, userToken, current=None):
+        """Method"""
         continuar = False
         auth_c = random.choice(list(self._service_announcements_subscriber.authenticators.values()))
 
         user = auth_c.whois(userToken)
 
-        if(user == ""):
+        if user == "":
             raise IceFlix.Unauthorized
-            
+
         media = IceFlix.Media()
         mediaInfo = IceFlix.MediaInfo()
-        
+
         for pelicula in self.MediaDBList:
             if pelicula.mediaId == mediaId:
                 continuar = True
                 mediaInfo.name = pelicula.name
                 media.mediaId = mediaId
                 media.info = mediaInfo
-                
-        if(continuar==False):
+
+        if continuar is False:
             raise IceFlix.WrongMediaId
 
         return media
 
     def getTilesByName(self, name, exact, current=None):
+        """Method"""
         id = []
-     
-        if(exact == True):
+
+        if exact is True:
             for pelis in self.MediaDBList:
-                if(pelis.name == name):
+                if pelis.name == name:
                     id.append(pelis.mediaId)
-            
+
         else:
             for pelis in self.MediaDBList:
-                if(name in pelis.name):
+                if name in pelis.name:
                     id.append(pelis.mediaId)
         return id
 
     def getTilesByTags(self, tags, allTags, userToken, current=None):
+        """Method"""
         idAT = []
 
         auth_c = random.choice(list(self._service_announcements_subscriber.authenticators.values()))
         user = auth_c.whois(userToken)
 
-        if(user == ""):
+        if user == "":
             raise IceFlix.Unauthorized
-        
-        if allTags == True:
+
+        if allTags is True:
             for pelicula in self.MediaDBList:
                 if pelicula.tagsPerUser is not None and pelicula.tagsPerUser.get(user):
                     todasTags = 0
@@ -193,23 +208,23 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                             continuar = False
                     if continuar:
                         idAT.append(pelicula.mediaId)
-            
+
         return idAT
 
     def addTags(self, mediaId, tag, userToken, current=None):
-       
+        """Method"""
         continuar = False
         auth_c = random.choice(list(self._service_announcements_subscriber.authenticators.values()))
         user = auth_c.whois(userToken)
         dic = {}
         newTags = []
-        if(user == ""):
+        if user == "":
             raise IceFlix.Unauthorized
-        
+
         for pelicula in self.MediaDBList:
             if pelicula.mediaId == mediaId:
                 continuar = True
-                
+
                 if pelicula.tagsPerUser is not None and user in pelicula.tagsPerUser.keys():
                     newTags = pelicula.tagsPerUser.get(user)
                 else:
@@ -223,15 +238,15 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                 self.generateJson2DB(self.ruta)
                 self.catalogUpdates_publisher.addTags(mediaId, newTags, user, self.service_id)
 
-        if(continuar==False):
+        if continuar is False:
             raise IceFlix.WrongMediaId
-        
-    def removeTags(self, mediaId, tags, userToken, current=None):
 
+    def removeTags(self, mediaId, tags, userToken, current=None):
+        """Method"""
         auth_c = random.choice(list(self._service_announcements_subscriber.authenticators.values()))
-        continuar=False
+        continuar = False
         user = auth_c.whois(userToken)
-        if(user == ""):
+        if user == "":
             raise IceFlix.Unauthorized
         for pelicula in self.MediaDBList:
             if pelicula.mediaId == mediaId:
@@ -242,20 +257,20 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                     for etiqueta in tags:
                         if etiqueta in newTags:
                             newTags.remove(etiqueta)
-            
+
                     pelicula.tagsPerUser[user] = newTags
 
                     self.generateJson2DB(self.ruta)
                     self.catalogUpdates_publisher.removeTags(mediaId, newTags, user, self.service_id)
-        
-        if(continuar==False):
+
+        if continuar is False:
             raise IceFlix.WrongMediaId
 
     def renameTile(self, mediaId, name, adminToken, current=None):
-        
+        """Method"""
         main_c = random.choice(list(self._service_announcements_subscriber.mains.values()))
         if main_c.isAdmin(adminToken):
-            continuar=False
+            continuar = False
 
             for pelicula in self.MediaDBList:
                 if pelicula.mediaId == mediaId:
@@ -263,48 +278,54 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                     pelicula.name = name
                     self.generateJson2DB(self.ruta)
                     self.catalogUpdates_publisher.renameTile(mediaId, name, self.service_id)
-    
+
         else:
-            raise IceFlix.Unauthorized 
-        if(continuar==False):
+            raise IceFlix.Unauthorized
+        if continuar is False:
             raise IceFlix.WrongMediaId
 
     def initService(self):
+        """Method"""
         print("Inicio de servicios")
         self._srv_announce_pub.newService(self._prx_service, self.service_id)
         self.announcements = threading.Timer(3.0, self.serviceAnnouncing)
         self.announcements.start()
 
     def serviceAnnouncing(self):
+        """Method"""
         if not self._updated:
             print("Base de Datos actualizada del json")
             self.updateDBjson()
             self._updated = True
 
         self._srv_announce_pub.announce(self._prx_service, self.service_id)
-        time = 10 + random.uniform(-2,2)
+        time = 10 + random.uniform(-2, 2)
         self.announcements = threading.Timer(time, self.serviceAnnouncing)
         self.announcements.start()
-    
+
     def getDB(self):
+        """Method"""
         return self.MediaDBList
 
     def sendDB(self, srv_proxy):
+        """Method"""
         catalogDB = self.getDB()
         srvId = self.service_id
         print("Enviando BD...")
         srv_proxy.updateDB(catalogDB, srvId)
-    
-    def updateDB(self, catalogDB, srvId, current = None):
-        if self._updated == True:
+
+    def updateDB(self, catalogDB, srvId, current=None):
+        """Method"""
+        if self._updated is True:
             return
-        self.MediaDBList = catalogDB        
+        self.MediaDBList = catalogDB
         print("Base de datos actualizada desde: " + str(srvId))
         self.generateJson2DB(self.ruta)
         self._updated = True
-        self._srv_announce_pub.announce(self._prx_service,self.service_id)
+        self._srv_announce_pub.announce(self._prx_service, self.service_id)
 
     def check_availability(proxies):
+        """Method"""
         '''Chech ping of all stored proxies'''
         wrong_proxies = []
         for proxyId in proxies:
@@ -317,15 +338,16 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         for proxyId in wrong_proxies:
             del proxies[proxyId]
 
-class ClientCatalog(Ice.Application):    
-
+class ClientCatalog(Ice.Application):
+    """Application de Catalog"""
     def run(self, argv):
+        """Method"""
         adapter = self.communicator().createObjectAdapterWithEndpoints('MediaCatalogService', 'tcp')
         adapter.activate()
 
         #subscribe and publisher to ServiceAnnounce channel
         service_announce_topic = topics.getTopic(topics.getTopicManager(self.communicator()), 'ServiceAnnouncements')
-        service_announce_subscriber = ServiceAnnouncements("","","")
+        service_announce_subscriber = ServiceAnnouncements("", "", "")
         service_announce_subscriber_proxy = adapter.addWithUUID(service_announce_subscriber)
         service_announce_publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(service_announce_topic.getPublisher())
 
@@ -345,7 +367,7 @@ class ClientCatalog(Ice.Application):
         service_proxy = adapter.addWithUUID(service_implementation)
         print(service_proxy, flush=True)
         print(service_implementation.service_id)
-        
+
         #Asignacion al init de Service Announce
         service_announce_subscriber._service_type = service_proxy.ice_id()
         service_announce_subscriber._service_instance = service_implementation
@@ -366,20 +388,20 @@ class ClientCatalog(Ice.Application):
 
         catalogRevocations_topic.subscribeAndGetPublisher({}, catalogRevocations_subscriber_proxy)
 
-        
+
         service_implementation.initService()
-     
+
         self.shutdownOnInterrupt()
         self.communicator().waitForShutdown()
-        
-        if(service_implementation.checkLastInstance()):
+
+        if service_implementation.checkLastInstance():
             service_implementation.generateJson2DB("./")
         service_implementation.removeDirR()
         service_implementation.announcements.cancel()
         service_announce_subscriber.poll_timer.cancel()
-        
+
         service_announce_topic.unsubscribe(service_announce_subscriber_proxy)
-        
+
         return 0
 
 

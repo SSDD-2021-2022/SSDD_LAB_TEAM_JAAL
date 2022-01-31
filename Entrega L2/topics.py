@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# pylint:disable=W0613
+# pylint:disable=C0413
+# pylint:disable=E0401
+#pylint:disable=W0212
+# pylint:disable=C0103
+#no encuentra algunos atributos del IceStorm
+#pylint:disable=E1101
+#finally
+#pylint:disable=W0150
 
 '''IceStorm tools'''
 

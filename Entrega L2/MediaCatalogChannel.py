@@ -1,17 +1,21 @@
-import uuid
+# pylint:disable=W0613
+# pylint:disable=C0413
+#pylint:disable=W0212
+# pylint:disable=E0401
+# pylint:disable=C0103
 import Ice
 Ice.loadSlice('iceflix.ice')
 import IceFlix
-import threading
 
-class CatalogUpdates (IceFlix.CatalogUpdates):
-
+class CatalogUpdates(IceFlix.CatalogUpdates):
+    """Clase CatalogUpdates"""
     def __init__(self, service_instance, service_proxy, current=None):
         """Initialize the Discover object with empty services."""
         self._service_instance = service_instance
         self._service_proxy = service_proxy
 
     def renameTile(self, mediaId, name, srvId, current=None):
+        """Method"""
         if srvId == self._service_instance.service_id:
             return
         print("El srv "+srvId+" ha renombrado el id"+mediaId+" con el nombre "+name)
@@ -20,7 +24,8 @@ class CatalogUpdates (IceFlix.CatalogUpdates):
                 pelicula.name = name
                 self._service_instance.generateJson2DB(self._service_instance.ruta)
 
-    def addTags(self, mediaId, tags, user, srvId, current=None): 
+    def addTags(self, mediaId, tags, user, srvId, current=None):
+        """Method"""
         if srvId == self._service_instance.service_id:
             return
         print("El srv "+srvId+" ha añadido los tags para el usuario "+user)
@@ -35,8 +40,9 @@ class CatalogUpdates (IceFlix.CatalogUpdates):
                     pelicula.tagsPerUser = dic
 
                 self._service_instance.generateJson2DB(self._service_instance.ruta)
-        
-    def removeTags(self, mediaId, tags,  user, srvId, current=None):
+
+    def removeTags(self, mediaId, tags, user, srvId, current=None):
+        """Method"""
         if srvId == self._service_instance.service_id:
             return
         print("El srv "+srvId+" ha eliminado los tags para el usuario "+user)
@@ -46,6 +52,3 @@ class CatalogUpdates (IceFlix.CatalogUpdates):
             if pelicula.mediaId == mediaId:
                 pelicula.tagsPerUser[user] = tags
                 self._service_instance.generateJson2DB(self._service_instance.ruta)
-
-
-    
